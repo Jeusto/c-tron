@@ -1,20 +1,20 @@
 CC = gcc
-# CFLAGS = -Wall -Wextra -Werror -g -std=c99 -pedantic
-CFLAGS = -Wall -Wextra -g -std=c99 -pedantic
-LDFLAGS = -lncurses
-EXEC = projet
-SRC = $(wildcard *.c)
-OBJ = $(SRC:.c=.o)
+CFLAGS = -Wall -Wextra -g -std=c99 -pedantic # ajouter -Werror avant rendu
+LFLAGS = -lncurses
 BUILDDIR = build
+SRCDIR = src
 
-all: $(EXEC)
+all: create_build_dir client server
 
-$(EXEC): $(OBJ)
-	$(CC) -o $@ $^ $(LDFLAGS)
+create_build_dir:
+	mkdir -p $(BUILDDIR)
 
-%.o: %.c
-	$(CC) -o $@ -c $< $(CFLAGS)
+client:
+	gcc -o build/server src/server.c
+	$(CC) $(CFLAGS) -o ./$(BUILDDIR)/client ./$(SRCDIR)/client.c $(LFLAGS)
+
+server:
+	$(CC) $(CFLAGS) -o ./$(BUILDDIR)/server ./$(SRCDIR)/server.c $(LFLAGS)
 
 clean:
-	rm -rf *.o
-	rm -rf $(EXEC)
+	rm -rf build

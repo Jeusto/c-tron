@@ -1,6 +1,7 @@
 .vscode
 .idea
 valrind-out.txt
+build
 *.exe
 *.out
 *.o

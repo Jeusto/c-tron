@@ -7,10 +7,8 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "common.h"
+#include "../include/common.h"
 
-#define XMAX 100
-#define YMAX 50
 #define NB_COLORS 5
 #define TRAIL_INDEX_SHIFT 50
 
@@ -65,19 +63,65 @@ void display_character(int color, int y, int x, char character) {
   attroff(COLOR_PAIR(color));
 }
 
+void update_display() {}
+
+int convert_key_to_movement(char c) {
+  int key = -1;
+
+  switch (c) {
+    case 'z':
+    case 'i':
+      key = UP;
+      break;
+    case 's':
+    case 'k':
+      key = DOWN;
+      break;
+    case 'q':
+    case 'j':
+      key = LEFT;
+      break;
+    case 'd':
+    case 'l':
+      key = RIGHT;
+      break;
+    case ' ':
+    case 'm':
+      key = TRAIL_UP;
+      break;
+    default:
+      break;
+  }
+
+  return key;
+}
+
 // arguments temporairement hardcodés
 #define BUF_SIZE 1024
-#define NB_JOUEURS_SUR_CLIENT 2
 #define SERVER_PORT 5555
+#define NB_JOUEURS_SUR_CLIENT 2
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   struct sockaddr_in6 server_addr;
-  int socket_fd, activity, max_fd;
+  int socket_fd, max_fd;
+  int activity = 0;
   int byte_count = 0;
   fd_set readfds;
+  display_info info = {
+      .winner = -1,
+      .board = {{0}},
+  };
+  // temporaire
+  (void)argv;
+  (void)argc;
+
+  // init display
+  // tune_terminal();
+  // init_graphics();
+  // srand(time(NULL));
 
   // creer socket
-  CHECK(socket_fd = socket(AF_INET6, SOCK_STREAM, 0));
+  CHECK(socket_fd = socket(AF_INET6, SOCK_STREAM, 0));  // todo: utiliser ipv4
   max_fd = socket_fd;
 
   // preparer adresse serveur
@@ -88,40 +132,23 @@ int main(int argc, char **argv) {
 
   // se connecter au serveur
   CHECK(
-      connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)));
+      connect(socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)));
 
   // envoyer nombre de joueurs sur ce client au serveur
-  uint32_t some_long = 10;
-  uint32_t network_byte_order;
-  network_byte_order = htonl(NB_JOUEURS_SUR_CLIENT);
-  CHECK(send(socket_fd, &network_byte_order, sizeof(uint32_t), 0));
+  struct client_init_infos init_info = {
+      .nb_players = NB_JOUEURS_SUR_CLIENT,
+  };
+  CHECK(send(socket_fd, &init_info, sizeof(uint32_t), 0));
 
-  tune_terminal();
-  init_graphics();
-  srand(time(NULL));
-
-  for (;;) {
-    clear();
-    for (size_t i = 0; i < YMAX; i++) {
-      for (size_t j = 0; j < XMAX; j++) {
-        if (i == 0 || i == YMAX - 1) {
-          display_character(CYAN_ON_CYAN, i, j, ' ');
-        } else if (j == 0 || j == XMAX - 1) {
-          display_character(CYAN_ON_CYAN, i, j, ' ');
-        } else {
-          display_character(RED_ON_RED, i, j, ' ');
-          // if (rand() % 2)
-          //   display_character(rand() % NB_COLORS, i, j, 'X');
-          // else
-          //   display_character(rand() % NB_COLORS + TRAIL_INDEX_SHIFT, i, j,
-          //                     'X');
-        }
+  // TEMPORAIRE pour tester le display
+  for (size_t x = 0; x < XMAX; x++) {
+    for (size_t y = 0; y < YMAX; y++) {
+      if (x == 0 || x == XMAX - 1 || y == 0 || y == YMAX - 1) {
+        info.board[x][y] = 111;
+      } else {
+        info.board[x][y] = 120;
       }
-      mvaddstr(0, XMAX / 2 - strlen("C-TRON") / 2, "C-TRON");
     }
-
-    sleep(2);
-    refresh();
   }
 
   // boucle pour attendre messages du serveur
@@ -131,20 +158,40 @@ int main(int argc, char **argv) {
     FD_SET(STDIN_FILENO, &readfds);
     FD_SET(socket_fd, &readfds);
 
-    // printf("En attente de messages, ecrire pour envoyer: \n");
-    // on s'en fout des fd write et exception et le delai
     CHECK(activity = select(max_fd + 1, &readfds, NULL, NULL, NULL));
 
+    // message recu du serveur -> recuperer structure display_info et afficher
     if (FD_ISSET(socket_fd, &readfds)) {
-      // message recu du serveur ->  afficher pour l'utilisateur
+      CHECK(byte_count =
+                recv(socket_fd, &info, sizeof(struct display_info), 0));
+      update_display();
+    }
+
+    // un des joueurs a appuyé sur une touche
+    if (FD_ISSET(STDIN_FILENO, &readfds)) {
       char buf[BUF_SIZE];
-      CHECK(byte_count = recv(socket_fd, buf, BUF_SIZE, 0));
+      CHECK(byte_count = read(STDIN_FILENO, buf, BUF_SIZE));
       buf[byte_count] = '\0';
-      printf("Recu %d bytes: %s\n", byte_count, buf);
+      int player_id = 0;
+
+      // todo: refactor cette chiasse
+      if (NB_JOUEURS_SUR_CLIENT == 2 && buf[0] == 'z' || buf[0] == 'q' ||
+          buf[0] == 's' || buf[0] == 'd' || buf[0] == ' ') {
+        player_id = 0;
+      } else if (buf[0] == 'i' || buf[0] == 'j' || buf[0] == 'k' ||
+                 buf[0] == 'l' || buf[0] == 'm') {
+        player_id = 1;
+      }
+
+      // envoyer touche au serveur
+      struct client_input input = {
+          .id = player_id,
+          .input = convert_key_to_movement(buf[0]),
+      };
+      CHECK(send(socket_fd, &input, sizeof(struct client_input), 0));
     }
   }
 
-  // fermeture socket
   CHECK(close(socket_fd));
   return 0;
 }

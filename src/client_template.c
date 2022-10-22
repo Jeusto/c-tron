@@ -5,10 +5,10 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "common.h"
+#include "../include/common.h"
 
-#define XMAX 100
-#define YMAX 50
+#define XMAX 50
+#define YMAX 10
 #define NB_COLORS 5
 #define TRAIL_INDEX_SHIFT 50
 

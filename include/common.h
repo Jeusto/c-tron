@@ -19,7 +19,7 @@
 #define TRAIL_UP 4
 
 #define SERV_PORT 5555
-#define XMAX 100
+#define XMAX 25
 #define YMAX 50
 #define TIE -2
 #define TRAIL_INDEX_SHIFT 50
@@ -29,6 +29,7 @@
 #define TV struct timeval
 
 #define WALL 111
+#define EMPTY -1
 
 #define max(a, b)           \
   ({                        \
@@ -39,7 +40,7 @@
 
 #define CHECK(x)                                      \
   do {                                                \
-    if (!(x)) {                                       \
+    if ((x) == -1) {                                  \
       fprintf(stderr, "%s:%d: ", __func__, __LINE__); \
       perror(#x);                                     \
       exit(EXIT_FAILURE);                             \

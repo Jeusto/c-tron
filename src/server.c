@@ -14,6 +14,9 @@
 #include <time.h>
 #include <unistd.h>
 
+// TODO: ne pas utiliser de variable globale
+int game_running = 0;
+
 #include "../include/common.h"
 #include "../include/game-logic.h"
 
@@ -53,7 +56,6 @@ int main(int argc, char *argv[]) {
   int addr_size = sizeof client_addr;
   int master_socket;
   int refresh_rate = REFRESH_RATE;
-  int game_running = 0;
   int byte_count = 0;
   (void)argv;
   (void)argc;
@@ -73,7 +75,6 @@ int main(int argc, char *argv[]) {
   printf("Waiting for connections or messages...\n");
 
   while (1) {
-    // select with refresh rate
     CHECK(activity = select(max_fd + 1, &readfds, NULL, NULL, NULL));
 
     // si evenement sur le socket principal, c'est une nouvelle connexion
@@ -90,7 +91,7 @@ int main(int argc, char *argv[]) {
       CHECK(byte_count = recv(new_socket, &init_info,
                               sizeof(struct client_init_infos), 0));
 
-      nb_joueurs_sur_ce_client = init_info.nb_players;
+      nb_joueurs_sur_ce_client = ntohl(init_info.nb_players);
       printf("nb_joueurs_sur_ce_client : %d\n", nb_joueurs_sur_ce_client);
 
       // refuser si trop de joueurs
@@ -113,6 +114,7 @@ int main(int argc, char *argv[]) {
         FD_SET(new_socket, &readfds);
         if (new_socket > max_fd) max_fd = new_socket;
 
+        // si max joueurs atteint, lancer le jeu
         if (nb_joueurs_actuel == MAX_JOUEURS) {
           game_running = 1;
 
@@ -129,12 +131,10 @@ int main(int argc, char *argv[]) {
         }
       }
 
-      continue;  // #TODO:
+      continue;
     }
 
-    printf("je suis la\n");
-
-    // evenement entree standard (verifier si quit ou restart) #TODO:
+    // TODO: evenement entree standard (verifier si quit ou restart)
     if (FD_ISSET(STDIN_FILENO, &readfds)) {
       char buf[BUF_SIZE];
       fgets(buf, BUF_SIZE, stdin);
@@ -156,15 +156,18 @@ int main(int argc, char *argv[]) {
         int byte_count = 0;
         if (FD_ISSET(client_sd, &readfds)) {
           struct client_input input;
+          // TODO: recv peut faire lecture partielle donc faire une boucle ou
+          // utiliser MSG_WAITALL ?
           CHECK(byte_count =
                     recv(client_sd, &input, sizeof(struct client_input), 0));
+          input.id = ntohl(input.id);
           if (byte_count == 0) {
             // deconnexion
             printf("Client with socket %d deconnected\n", client_sd);
             // supprimer le socket de la liste
             close(client_sd);
             // remove_player(board, &list_players);
-            nb_joueurs_actuel--;  // todo verifier si 1 ou 2 joueurs ont deco
+            nb_joueurs_actuel--;  // TODO: verifier si 1 ou 2 joueurs ont deco
             nb_clients_actuel--;
             FD_CLR(client_sd, &readfds);
             list_sockets[i] = 0;
@@ -172,7 +175,8 @@ int main(int argc, char *argv[]) {
           } else {
             // message recu
             printf("joueur %d : movement %d\n", input.id, input.input);
-            move_player(board, &list_players[input.id], input.input);
+            update_player_direction(board, &list_players[input.id],
+                                    input.input);
           }
         }
       }

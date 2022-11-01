@@ -8,7 +8,7 @@
 #define BUF_SIZE 1024
 #define MAX_JOUEURS 2
 #define SERVER_PORT 5555
-#define REFRESH_RATE 1000
+#define REFRESH_RATE 500
 
 typedef struct player {
   int id;
@@ -84,10 +84,7 @@ player add_player(display_info *board, int id_player) {
 }
 
 // supprime un joueur
-void remove_player(display_info *board, player *player) {
-  board->board[player->x][player->y] = EMPTY;
-  player->alive = 0;
-}
+void remove_player(display_info *board, player *player) { player->alive = 0; }
 
 void restart(display_info *board, int maxX, int maxY, player *players,
              int nbPlayers) {
@@ -108,52 +105,101 @@ int checkWinner(player *players) {
   if (players[1].alive == 0) {
     return players[0].id;
   }
+
   return -1;
 }
 
 // deplace un joueur
-void move_player(display_info *board, player *p, int direction) {
-  int x = p->x;
-  int y = p->y;
-  int id = p->id;
+void update_player_direction(display_info *board, player *p, int direction) {
+  // on autorise pas de revenir en arriere, c'est a dire si le joueur va a
+  // gauche il peut pas directement aller a droite comme dans le snake classique
   switch (direction) {
     case UP:
-      p->y - 1;
+      if (p->direction != DOWN) {
+        p->direction = UP;
+      }
       break;
     case DOWN:
-      p->y + 1;
+      if (p->direction != UP) {
+        p->direction = DOWN;
+      }
       break;
     case LEFT:
-      p->x - 1;
+      if (p->direction != RIGHT) {
+        p->direction = LEFT;
+      }
       break;
     case RIGHT:
-      p->x + 1;
+      if (p->direction != LEFT) {
+        p->direction = RIGHT;
+      }
       break;
     case TRAIL_UP:
-      p->trail_up = p->trail_up == 0 ? 1 : 0;
-      // p->trail_up += 1%2;
+      p->trail_up = !p->trail_up;
       break;
   }
 
   // A VERIFIER SI CA POSE PROBLEME CAR UPDATE DU TRAIL AVANT LE DEPLACEMENT DU
   // JOUEUR mais normalement ca devrait pas poser de probleme
+  // if (p->trail_up == 1) {
+  //   board->board[x][y] = 50 + id;
+  // } else {
+  //   board->board[x][y] = EMPTY;
+  // }
+}
+
+void check_collision(display_info *board, player *p, int x, int y) {
+  // check collission
+  if (board->board[x][y] != EMPTY) {
+    remove_player(board, p);
+  }
+}
+
+void update_player_position(display_info *board, player *p) {
+  int x = p->x;
+  int y = p->y;
+  int id = p->id;
+
   if (p->trail_up == 1) {
     board->board[x][y] = 50 + id;
   } else {
     board->board[x][y] = EMPTY;
   }
-}
-void check_collision(display_info *board, player *p) {
-  if (board->board[p->x][p->y] != EMPTY) {
-    p->alive = 0;
-  }
-}
 
-void update_board(display_info *board, player *p) {
-  int x = p->x;
-  int y = p->y;
-  int id = p->id;
-  board->board[x][y] = id;
+  // remove all trail if trail_up == 0
+  if (p->trail_up == 0) {
+    int i, j;
+    for (i = 0; i < XMAX; i++) {
+      for (j = 0; j < YMAX; j++) {
+        if (board->board[i][j] == 50 + id) {
+          board->board[i][j] = EMPTY;
+        }
+      }
+    }
+  }
+
+  switch (p->direction) {
+    case UP:
+      check_collision(board, p, x, y - 1);
+      board->board[x][y - 1] = id;
+      p->y -= 1;
+      break;
+    case DOWN:
+      check_collision(board, p, x, y + 1);
+      board->board[x][y + 1] = id;
+      p->y += 1;
+      break;
+    case LEFT:
+      check_collision(board, p, x - 1, y);
+      board->board[x - 1][y] = id;
+      p->x -= 1;
+      break;
+    case RIGHT:
+      check_collision(board, p, x + 1, y);
+      board->board[x + 1][y] = id;
+      p->x += 1;
+      break;
+  }
 }
 
 /*
@@ -163,24 +209,27 @@ void update_board(display_info *board, player *p) {
 
 void update_game(display_info *board, player *players, int nbr_players) {
   int i;
-  for (i = 0; i < nbr_players; i++) {
-    check_collision(board, &players[i]);
-  }
   board->winner = checkWinner(players);
-  if (board->winner != -1) {
-    remove_player(board, &players[(board->winner + 1) % 2]);
-    return;
-  }
-  for (i = 0; i < nbr_players; i++) {
-    update_board(board, &players[i]);
+  if (board->winner >= 0) {
+    game_running = 0;
+  } else {
+    for (i = 0; i < nbr_players; i++) {
+      if (players[i].alive == 1) {
+        update_player_position(board, &players[i]);
+      }
+    }
   }
 }
 
 void send_board_to_all_clients(display_info *board, int sockets[],
                                int nbr_sockets) {
+  display_info board_copy;
+  memcpy(&board_copy, board, sizeof(display_info));
+  board_copy.winner = htonl(board_copy.winner);
+
   for (int i = 0; i < nbr_sockets; i++) {
     if (sockets[i] != 0) {
-      CHECK(send(sockets[i], board, sizeof(display_info), 0));
+      CHECK(send(sockets[i], &board_copy, sizeof(display_info), 0));
     }
   }
 }
@@ -191,12 +240,11 @@ void *fonction_thread_jeu(void *arg) {
 
   while (1) {
     // update game
-    printf("update game\n");
-    // if (game_running) {
-    update_game(t_arg->board, t_arg->players, *t_arg->nbr_players);
-    send_board_to_all_clients(t_arg->board, t_arg->sockets,
-                              *t_arg->nbr_sockets);
-    // }
+    if (game_running) {
+      update_game(t_arg->board, t_arg->players, *t_arg->nbr_players);
+      send_board_to_all_clients(t_arg->board, t_arg->sockets,
+                                *t_arg->nbr_sockets);
+    }
     usleep(REFRESH_RATE * 1000);
   }
 }

@@ -19,8 +19,8 @@
 #define TRAIL_UP 4
 
 #define SERV_PORT 5555
-#define XMAX 25
-#define YMAX 50
+#define XMAX 10
+#define YMAX 20
 #define TIE -2
 #define TRAIL_INDEX_SHIFT 50
 

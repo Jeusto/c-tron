@@ -32,7 +32,7 @@
 // TODO: temporairement hardcodes
 #define BUF_SIZE 1024
 #define SERVER_PORT 5555
-#define NB_JOUEURS_SUR_CLIENT 2
+#define NB_JOUEURS_SUR_CLIENT 1
 
 void tune_terminal() {
   struct termios term;

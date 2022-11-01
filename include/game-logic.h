@@ -1,6 +1,7 @@
 // TODO: separer declarations dans.h et implementations dans.c puis modifier le
 // makefile
 #include <pthread.h>
+#include <unistd.h>
 
 #include "../include/common.h"
 
@@ -23,7 +24,7 @@ typedef struct thread_arg {
   int socket;
   int *sockets;
   int *nbr_sockets;
-  player *players;
+  player *joueurs;
   int *nbr_players;
   display_info *board;
 } thread_arg;
@@ -71,39 +72,30 @@ player add_player(display_info *board, int id_player) {
   new_player.trail_up = 1;
   new_player.alive = 1;
 
-  // print board
-  for (int x = 0; x < maxX; x++) {
-    for (int y = 0; y < maxY; y++) {
-      printf("%d ", board->board[x][y]);
-    }
-    printf("\n");
-  }
-  printf("\n");
-
   return new_player;
 }
 
 // supprime un joueur
 void remove_player(display_info *board, player *player) { player->alive = 0; }
 
-void restart(display_info *board, int maxX, int maxY, player *players,
+void restart(display_info *board, int maxX, int maxY, player *joueurs,
              int nbPlayers) {
   initGame(board, maxX, maxY);
   int i;
   for (i = 0; i < nbPlayers; i++) {
-    players[i] = add_player(board, players[i].id);
+    joueurs[i] = add_player(&board, joueurs[i].id);
   }
 }
 
-int checkWinner(player *players) {
-  if (players[0].alive == 0 && players[1].alive == 0) {
+int checkWinner(player *joueurs) {
+  if (joueurs[0].alive == 0 && joueurs[1].alive == 0) {
     return TIE;
   }
-  if (players[0].alive == 0) {
-    return players[1].id;
+  if (joueurs[0].alive == 0) {
+    return joueurs[1].id;
   }
-  if (players[1].alive == 0) {
-    return players[0].id;
+  if (joueurs[1].alive == 0) {
+    return joueurs[0].id;
   }
 
   return -1;
@@ -207,15 +199,15 @@ void update_player_position(display_info *board, player *p) {
 2 : update le board
 */
 
-void update_game(display_info *board, player *players, int nbr_players) {
+void update_game(display_info *board, player *joueurs, int nbr_players) {
   int i;
-  board->winner = checkWinner(players);
+  board->winner = checkWinner(joueurs);
   if (board->winner >= 0) {
     game_running = 0;
   } else {
     for (i = 0; i < nbr_players; i++) {
-      if (players[i].alive == 1) {
-        update_player_position(board, &players[i]);
+      if (joueurs[i].alive == 1) {
+        update_player_position(board, &joueurs[i]);
       }
     }
   }
@@ -241,7 +233,7 @@ void *fonction_thread_jeu(void *arg) {
   while (1) {
     // update game
     if (game_running) {
-      update_game(t_arg->board, t_arg->players, *t_arg->nbr_players);
+      update_game(t_arg->board, t_arg->joueurs, *t_arg->nbr_players);
       send_board_to_all_clients(t_arg->board, t_arg->sockets,
                                 *t_arg->nbr_sockets);
     }

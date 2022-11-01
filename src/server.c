@@ -49,13 +49,12 @@ int main(int argc, char *argv[]) {
   fd_set readfds;
   int list_sockets[MAX_JOUEURS] = {0};
   int nb_joueurs_sur_ce_client = 0;
-  int nb_joueurs_actuel = 0;
-  int nb_clients_actuel = 0;
+  int nb_joueurs = 0;
+  int nb_clients = 0;
   int max_fd, new_socket, activity;
   struct sockaddr_in6 client_addr;
   int addr_size = sizeof client_addr;
   int master_socket;
-  int refresh_rate = REFRESH_RATE;
   int byte_count = 0;
   (void)argv;
   (void)argc;
@@ -68,9 +67,9 @@ int main(int argc, char *argv[]) {
   max_fd = master_socket;
 
   // initialisation du board
-  display_info board[XMAX][YMAX];
-  initGame(board, XMAX, YMAX);
-  player list_players[MAX_JOUEURS];
+  display_info board;
+  initGame(&board, XMAX, YMAX);
+  player list_joueurs[MAX_JOUEURS];
 
   printf("Waiting for connections or messages...\n");
 
@@ -80,13 +79,10 @@ int main(int argc, char *argv[]) {
     // si evenement sur le socket principal, c'est une nouvelle connexion
     if (FD_ISSET(master_socket, &readfds)) {
       printf("Nouvelle connexion\n");
-      CHECK(new_socket = accept(max_fd, (struct sockaddr *)&client_addr,
+      CHECK(new_socket = accept(master_socket, (struct sockaddr *)&client_addr,
                                 (socklen_t *)&addr_size));
 
       // recevoir nombre de joueurs sur ce client
-      uint32_t some_long = 0;
-      uint32_t network_byte_order;
-
       struct client_init_infos init_info;
       CHECK(byte_count = recv(new_socket, &init_info,
                               sizeof(struct client_init_infos), 0));
@@ -94,44 +90,42 @@ int main(int argc, char *argv[]) {
       nb_joueurs_sur_ce_client = ntohl(init_info.nb_players);
       printf("nb_joueurs_sur_ce_client : %d\n", nb_joueurs_sur_ce_client);
 
-      // refuser si trop de joueurs
-      if (nb_joueurs_actuel + nb_joueurs_sur_ce_client > MAX_JOUEURS) {
-        printf("New connection denied because max list_sockets reached\n");
+      // refuser si trop de joueurs ou plus de 2 joueurs
+      if (nb_joueurs + nb_joueurs_sur_ce_client > MAX_JOUEURS ||
+          nb_joueurs_sur_ce_client > 2) {
+        printf("New connection denied\n");
         close(new_socket);
       }
 
       // sinon, accepter
       else {
         for (int i = 0; i < nb_joueurs_sur_ce_client; i++) {
-          list_players[nb_joueurs_actuel++] =
-              add_player(board, nb_joueurs_actuel);
+          list_joueurs[nb_joueurs++] = add_player(&board, nb_joueurs);
         }
 
         printf("Adding to list of client sockets\n");
         printf("socket %d\n", new_socket);
-        list_sockets[nb_clients_actuel] = new_socket;
-        nb_clients_actuel++;
+        list_sockets[nb_clients++] = new_socket;
+        printf("nb_clients_actuel : %d\n", nb_clients);
         FD_SET(new_socket, &readfds);
         if (new_socket > max_fd) max_fd = new_socket;
 
         // si max joueurs atteint, lancer le jeu
-        if (nb_joueurs_actuel == MAX_JOUEURS) {
+        if (nb_joueurs == MAX_JOUEURS) {
           game_running = 1;
 
           // lancement du thread de jeu
           pthread_t thread_jeu;
           thread_arg t_arg;
-          t_arg.socket = new_socket;
+          t_arg.socket = master_socket;
           t_arg.sockets = list_sockets;
-          t_arg.nbr_sockets = &nb_joueurs_actuel;
-          t_arg.players = list_players;
-          t_arg.nbr_players = &nb_joueurs_actuel;
-          t_arg.board = board;
+          t_arg.nbr_sockets = &nb_clients;
+          t_arg.joueurs = list_joueurs;
+          t_arg.nbr_players = &nb_joueurs;
+          t_arg.board = &board;
           pthread_create(&thread_jeu, NULL, fonction_thread_jeu, &t_arg);
         }
       }
-
-      continue;
     }
 
     // TODO: evenement entree standard (verifier si quit ou restart)
@@ -150,8 +144,8 @@ int main(int argc, char *argv[]) {
     if (game_running) {
       printf("Parcourir list_sockets\n");
 
-      for (int i = 0; i < nb_clients_actuel; i++) {
-        printf("client = %d, socket = %d\n", i, list_sockets[i]);
+      for (int i = 0; i < nb_clients; i++) {
+        printf("joueur = %d, socket = %d\n", i, list_sockets[i]);
         int client_sd = list_sockets[i];
         int byte_count = 0;
         if (FD_ISSET(client_sd, &readfds)) {
@@ -161,21 +155,23 @@ int main(int argc, char *argv[]) {
           CHECK(byte_count =
                     recv(client_sd, &input, sizeof(struct client_input), 0));
           input.id = ntohl(input.id);
+          printf("Recu un input du socket %d, joueur id = %d\n", client_sd,
+                 input.id);
+
           if (byte_count == 0) {
             // deconnexion
             printf("Client with socket %d deconnected\n", client_sd);
             // supprimer le socket de la liste
             close(client_sd);
-            // remove_player(board, &list_players);
-            nb_joueurs_actuel--;  // TODO: verifier si 1 ou 2 joueurs ont deco
-            nb_clients_actuel--;
+            // remove_player(board, &list_joueurs);
+            nb_joueurs--;  // TODO: verifier si 1 ou 2 joueurs ont deco
+            nb_clients--;
             FD_CLR(client_sd, &readfds);
             list_sockets[i] = 0;
             max_fd--;
           } else {
             // message recu
-            printf("joueur %d : movement %d\n", input.id, input.input);
-            update_player_direction(board, &list_players[input.id],
+            update_player_direction(&board, &list_joueurs[input.id],
                                     input.input);
           }
         }

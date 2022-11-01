@@ -86,11 +86,11 @@ int main(int argc, char** argv) {
       int player_id = 0;
 
       // TODO: refactor ca
-      if (NB_JOUEURS_SUR_CLIENT == 2 && buf[0] == 'z' || buf[0] == 'q' ||
-          buf[0] == 's' || buf[0] == 'd' || buf[0] == ' ') {
+      if (buf[0] == 'z' || buf[0] == 'q' || buf[0] == 's' || buf[0] == 'd' ||
+          buf[0] == ' ') {
         player_id = 0;
-      } else if (buf[0] == 'i' || buf[0] == 'j' || buf[0] == 'k' ||
-                 buf[0] == 'l' || buf[0] == 'm') {
+      } else if (NB_JOUEURS_SUR_CLIENT == 2 && buf[0] == 'i' || buf[0] == 'j' ||
+                 buf[0] == 'k' || buf[0] == 'l' || buf[0] == 'm') {
         player_id = 1;
       } else {
         continue;
@@ -102,8 +102,8 @@ int main(int argc, char** argv) {
           .input = convert_key_to_movement(buf[0]),
       };
       input.id = htonl(input.id);
-      // printf("sending input %d to server, player %d, byte_count: %d\n",
-      //        input.input, input.id, byte_count);
+      printf("sending input %d to server, player %d, byte_count: %d\n",
+             input.input, input.id, byte_count);
       CHECK(send(socket_fd, &input, sizeof(struct client_input), 0));
     }
   }

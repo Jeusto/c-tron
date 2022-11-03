@@ -46,7 +46,7 @@ int socket_factory() {
 }
 
 int main(int argc, char *argv[]) {
-  fd_set readfds;
+  fd_set master_fds, readfds;
   int list_sockets[MAX_JOUEURS] = {0};
   int nb_joueurs_sur_ce_client = 0;
   int nb_joueurs = 0;
@@ -62,8 +62,9 @@ int main(int argc, char *argv[]) {
   master_socket = socket_factory();
   CHECK(listen(master_socket, MAX_JOUEURS));
   FD_ZERO(&readfds);
-  FD_SET(STDIN_FILENO, &readfds);
-  FD_SET(master_socket, &readfds);
+  FD_ZERO(&master_fds);
+  FD_SET(STDIN_FILENO, &master_fds);
+  FD_SET(master_socket, &master_fds);
   max_fd = master_socket;
 
   // initialisation du board
@@ -74,6 +75,7 @@ int main(int argc, char *argv[]) {
   printf("Waiting for connections or messages...\n");
 
   while (1) {
+    readfds = master_fds;
     CHECK(activity = select(max_fd + 1, &readfds, NULL, NULL, NULL));
 
     // si evenement sur le socket principal, c'est une nouvelle connexion
@@ -107,7 +109,7 @@ int main(int argc, char *argv[]) {
         printf("socket %d\n", new_socket);
         list_sockets[nb_clients++] = new_socket;
         printf("nb_clients_actuel : %d\n", nb_clients);
-        FD_SET(new_socket, &readfds);
+        FD_SET(new_socket, &master_fds);
         if (new_socket > max_fd) max_fd = new_socket;
 
         // si max joueurs atteint, lancer le jeu
@@ -166,7 +168,7 @@ int main(int argc, char *argv[]) {
             // remove_player(board, &list_joueurs);
             nb_joueurs--;  // TODO: verifier si 1 ou 2 joueurs ont deco
             nb_clients--;
-            FD_CLR(client_sd, &readfds);
+            FD_CLR(client_sd, &master_fds);
             list_sockets[i] = 0;
             max_fd--;
           } else {

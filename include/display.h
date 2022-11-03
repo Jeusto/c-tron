@@ -32,7 +32,7 @@
 // TODO: temporairement hardcodes
 #define BUF_SIZE 1024
 #define SERVER_PORT 5555
-#define NB_JOUEURS_SUR_CLIENT 1
+#define NB_JOUEURS_SUR_CLIENT 2
 
 void tune_terminal() {
   struct termios term;
@@ -74,6 +74,7 @@ void display_character(int color, int y, int x, char character) {
 }
 
 void update_display(display_info *board) {
+  clear();
   for (int x = 0; x < XMAX; x++) {
     for (int y = 0; y < YMAX; y++) {
       int color = board->board[x][y];
@@ -95,4 +96,5 @@ void update_display(display_info *board) {
       display_character(WALL, YMAX, j, ' ');
     }
   }
+  refresh();
 }

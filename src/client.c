@@ -40,7 +40,6 @@ int convert_key_to_movement(char c) {
 }
 
 int main(int argc, char** argv) {
-  // TODO: utiliser ipv4 dans la version de base
   struct sockaddr_in server_addr;
   int socket_fd, max_fd;
   int activity = 0;
@@ -103,9 +102,7 @@ int main(int argc, char** argv) {
         // FIXME: temporaire pour tester mais a corriger
         info.board[0][0] = 111;
 
-        clear();
         update_display(&info);
-        refresh();
       }
     }
 
@@ -116,7 +113,6 @@ int main(int argc, char** argv) {
       buf[byte_count] = '\0';
       int player_id = 0;
 
-      // TODO: refactor ca
       if (buf[0] == 'z' || buf[0] == 'q' || buf[0] == 's' || buf[0] == 'd' ||
           buf[0] == ' ') {
         player_id = 0;

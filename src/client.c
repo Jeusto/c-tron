@@ -41,7 +41,7 @@ int convert_key_to_movement(char c) {
 
 int main(int argc, char** argv) {
   // TODO: utiliser ipv4 dans la version de base
-  struct sockaddr_in6 server_addr;
+  struct sockaddr_in server_addr;
   int socket_fd, max_fd;
   int activity = 0;
   int byte_count = 0;
@@ -56,14 +56,14 @@ int main(int argc, char** argv) {
   srand(time(NULL));
 
   // creer socket
-  CHECK(socket_fd = socket(AF_INET6, SOCK_STREAM, 0));  // todo: utiliser ipv4
+  CHECK(socket_fd = socket(AF_INET, SOCK_STREAM, 0));  // todo: utiliser ipv4
   max_fd = socket_fd;
 
   // preparer adresse serveur
   memset(&server_addr, 0, sizeof(server_addr));
-  server_addr.sin6_family = AF_INET6;
-  server_addr.sin6_port = htons(SERVER_PORT);
-  server_addr.sin6_addr = in6addr_any;
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons(SERVER_PORT);
+  server_addr.sin_addr.s_addr = INADDR_ANY;
 
   // se connecter au serveur
   CHECK(

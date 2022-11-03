@@ -22,11 +22,11 @@ int game_running = 0;
 
 int socket_factory() {
   int master_socket;
-  struct sockaddr_in6 server_addr;
+  struct sockaddr_in server_addr;
   int opt = 1;
 
   // creer socket principale
-  CHECK(master_socket = socket(AF_INET6, SOCK_STREAM, 0));
+  CHECK(master_socket = socket(AF_INET, SOCK_STREAM, 0));
 
   // accepter plusieurs connexions
   CHECK(setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt,
@@ -34,9 +34,9 @@ int socket_factory() {
 
   // preparer adresse serveur
   memset(&server_addr, 0, sizeof(server_addr));
-  server_addr.sin6_family = AF_INET6;
-  server_addr.sin6_port = htons(SERVER_PORT);
-  server_addr.sin6_addr = in6addr_any;
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons(SERVER_PORT);
+  server_addr.sin_addr.s_addr = INADDR_ANY;
 
   // associer socket a adresse
   CHECK(bind(master_socket, (struct sockaddr *)&server_addr,
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
   int nb_joueurs = 0;
   int nb_clients = 0;
   int max_fd, new_socket, activity;
-  struct sockaddr_in6 client_addr;
+  struct sockaddr_in client_addr;
   int addr_size = sizeof client_addr;
   int master_socket;
   int byte_count = 0;

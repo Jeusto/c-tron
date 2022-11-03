@@ -8,6 +8,37 @@
 #include "../include/common.h"
 #include "../include/display.h"
 
+int convert_key_to_movement(char c) {
+  int input = -1;
+
+  switch (c) {
+    case KEY_UP_P1:
+    case KEY_UP_P2:
+      input = UP;
+      break;
+    case KEY_DOWN_P1:
+    case KEY_DOWN_P2:
+      input = DOWN;
+      break;
+    case KEY_LEFT_P1:
+    case KEY_LEFT_P2:
+      input = LEFT;
+      break;
+    case KEY_RIGHT_P1:
+    case KEY_RIGHT_P2:
+      input = RIGHT;
+      break;
+    case KEY_TRAIL_P1:
+    case KEY_TRAIL_P2:
+      input = TRAIL_UP;
+      break;
+    default:
+      break;
+  }
+
+  return input;
+}
+
 int main(int argc, char** argv) {
   // TODO: utiliser ipv4 dans la version de base
   struct sockaddr_in6 server_addr;

@@ -32,7 +32,7 @@
 // TODO: temporairement hardcodes
 #define BUF_SIZE 1024
 #define SERVER_PORT 5555
-#define NB_JOUEURS_SUR_CLIENT 1
+#define NB_JOUEURS_SUR_CLIENT 2
 
 void tune_terminal() {
   struct termios term;
@@ -89,35 +89,10 @@ void update_display(display_info *board) {
       mvprintw(0, 0, "Player %d won!", board->winner);
     }
   }
-}
-
-int convert_key_to_movement(char c) {
-  int input = -1;
-
-  switch (c) {
-    case KEY_UP_P1:
-    case KEY_UP_P2:
-      input = UP;
-      break;
-    case KEY_DOWN_P1:
-    case KEY_DOWN_P2:
-      input = DOWN;
-      break;
-    case KEY_LEFT_P1:
-    case KEY_LEFT_P2:
-      input = LEFT;
-      break;
-    case KEY_RIGHT_P1:
-    case KEY_RIGHT_P2:
-      input = RIGHT;
-      break;
-    case KEY_TRAIL_P1:
-    case KEY_TRAIL_P2:
-      input = TRAIL_UP;
-      break;
-    default:
-      break;
+  // show info bar of size height 3 with message in the middle
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < XMAX; j++) {
+      display_character(WALL, YMAX, j, ' ');
+    }
   }
-
-  return input;
 }

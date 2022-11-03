@@ -18,6 +18,8 @@ typedef struct player {
   int trail_up;
   int direction;
   int alive;
+  int socket_associe;
+  int id_sur_socket;
 } player;
 
 typedef struct thread_arg {
@@ -27,6 +29,7 @@ typedef struct thread_arg {
   player *joueurs;
   int *nbr_players;
   display_info *board;
+  int *game_running;
 } thread_arg;
 
 void initGame(display_info *board, int maxX, int maxY) {
@@ -43,10 +46,12 @@ void initGame(display_info *board, int maxX, int maxY) {
   board->winner = -1;
 }
 
-player add_player(display_info *board, int id_player) {
+player add_player(display_info *board, int id_player, int new_socket,
+                  int id_sur_socket) {
   int maxX = XMAX;
   int maxY = YMAX;
   player new_player;
+
   switch (id_player) {
     case 0:
       board->board[1][1] = id_player;
@@ -71,6 +76,8 @@ player add_player(display_info *board, int id_player) {
   // trail actif par defaut
   new_player.trail_up = 1;
   new_player.alive = 1;
+  new_player.socket_associe = new_socket;
+  new_player.id_sur_socket = id_sur_socket;
 
   return new_player;
 }
@@ -83,7 +90,8 @@ void restart(display_info *board, int maxX, int maxY, player *joueurs,
   initGame(board, maxX, maxY);
   int i;
   for (i = 0; i < nbPlayers; i++) {
-    joueurs[i] = add_player(&board, joueurs[i].id);
+    joueurs[i] = add_player(&board, joueurs[i].id, joueurs[i].socket_associe,
+                            joueurs[i].id_sur_socket);
   }
 }
 
@@ -130,14 +138,6 @@ void update_player_direction(display_info *board, player *p, int direction) {
       p->trail_up = !p->trail_up;
       break;
   }
-
-  // A VERIFIER SI CA POSE PROBLEME CAR UPDATE DU TRAIL AVANT LE DEPLACEMENT DU
-  // JOUEUR mais normalement ca devrait pas poser de probleme
-  // if (p->trail_up == 1) {
-  //   board->board[x][y] = 50 + id;
-  // } else {
-  //   board->board[x][y] = EMPTY;
-  // }
 }
 
 void check_collision(display_info *board, player *p, int x, int y) {
@@ -170,6 +170,9 @@ void update_player_position(display_info *board, player *p) {
     }
   }
 
+  // FIXME: a l'heure actuelle si les deux joueurs se rentrent dedans, le
+  // joueur, y en a un qui gagne au lieu d'avoir egalite (parce qu'on check
+  // collission joueur par jouer ?)
   switch (p->direction) {
     case UP:
       check_collision(board, p, x, y - 1);
@@ -232,11 +235,13 @@ void *fonction_thread_jeu(void *arg) {
 
   while (1) {
     // update game
-    if (game_running) {
+    if (*t_arg->game_running == 1) {
       update_game(t_arg->board, t_arg->joueurs, *t_arg->nbr_players);
       send_board_to_all_clients(t_arg->board, t_arg->sockets,
                                 *t_arg->nbr_sockets);
+      usleep(REFRESH_RATE * 1000);
+    } else {
+      pthread_exit(0);
     }
-    usleep(REFRESH_RATE * 1000);
   }
 }

@@ -102,7 +102,8 @@ int main(int argc, char *argv[]) {
       // sinon, accepter
       else {
         for (int i = 0; i < nb_joueurs_sur_ce_client; i++) {
-          list_joueurs[nb_joueurs++] = add_player(&board, nb_joueurs);
+          list_joueurs[nb_joueurs++] =
+              add_player(&board, nb_joueurs, new_socket, i);
         }
 
         printf("Adding to list of client sockets\n");
@@ -119,12 +120,14 @@ int main(int argc, char *argv[]) {
           // lancement du thread de jeu
           pthread_t thread_jeu;
           thread_arg t_arg;
+          // TODO: gerer section critique, mutex ou pas ?
           t_arg.socket = master_socket;
           t_arg.sockets = list_sockets;
           t_arg.nbr_sockets = &nb_clients;
           t_arg.joueurs = list_joueurs;
           t_arg.nbr_players = &nb_joueurs;
           t_arg.board = &board;
+          t_arg.game_running = &game_running;
           pthread_create(&thread_jeu, NULL, fonction_thread_jeu, &t_arg);
         }
       }
@@ -134,11 +137,14 @@ int main(int argc, char *argv[]) {
     if (FD_ISSET(STDIN_FILENO, &readfds)) {
       char buf[BUF_SIZE];
       fgets(buf, BUF_SIZE, stdin);
-      printf("buf = %s", buf);
+      buf[strlen(buf) - 1] = '\0';
       if (strcmp(buf, "quit") == 0) {
-        //
+        printf("Quitting...\n");
+        exit(0);
+        game_running = 0;
       } else if (strcmp(buf, "restart") == 0) {
-        //
+        // FIXME: erreur stack smashing detected
+        // restart(&board, XMAX, YMAX, list_joueurs, nb_joueurs);
       }
     }
 
@@ -148,11 +154,12 @@ int main(int argc, char *argv[]) {
 
       for (int i = 0; i < nb_clients; i++) {
         printf("joueur = %d, socket = %d\n", i, list_sockets[i]);
+
         int client_sd = list_sockets[i];
         int byte_count = 0;
         if (FD_ISSET(client_sd, &readfds)) {
           struct client_input input;
-          // TODO: recv peut faire lecture partielle donc faire une boucle ou
+          // FIXME: recv peut faire lecture partielle donc faire une boucle ou
           // utiliser MSG_WAITALL ?
           CHECK(byte_count =
                     recv(client_sd, &input, sizeof(struct client_input), 0));
@@ -166,15 +173,21 @@ int main(int argc, char *argv[]) {
             // supprimer le socket de la liste
             close(client_sd);
             // remove_player(board, &list_joueurs);
-            nb_joueurs--;  // TODO: verifier si 1 ou 2 joueurs ont deco
+            nb_joueurs--;  // FIXME: verifier si 1 ou 2 joueurs ont deco
             nb_clients--;
             FD_CLR(client_sd, &master_fds);
             list_sockets[i] = 0;
             max_fd--;
           } else {
             // message recu
-            update_player_direction(&board, &list_joueurs[input.id],
-                                    input.input);
+            for (int j = 0; j < nb_joueurs; j++) {
+              if (list_joueurs[j].socket_associe == client_sd &&
+                  list_joueurs[j].id_sur_socket == input.id) {
+                printf("Joueur numero %d, sur socket %d, id sur socket = %d\n",
+                       j, client_sd, input.id);
+                update_player_direction(&board, &list_joueurs[j], input.input);
+              }
+            }
           }
         }
       }

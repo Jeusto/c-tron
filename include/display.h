@@ -81,7 +81,7 @@ void update_display(display_info *game_info) {
       int color = game_info->board[x][y];
 
       if (color >= 0 && color < NB_COLORS) {
-        display_character(color, y, x, 'o');
+        display_character(color, y, x, '0' + color);
       } else {
         display_character(color, y, x, color);
       }

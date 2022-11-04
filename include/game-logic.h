@@ -32,7 +32,7 @@ typedef struct thread_arg {
   int *game_running;
 } thread_arg;
 
-void initGame(display_info *board, int maxX, int maxY) {
+void init_game(display_info *board, int maxX, int maxY) {
   int x, y;
   for (x = 0; x < maxX; x++) {
     for (y = 0; y < maxY; y++) {
@@ -87,7 +87,7 @@ void remove_player(display_info *board, player *player) { player->alive = 0; }
 
 void restart(display_info *board, int maxX, int maxY, player *joueurs,
              int nbPlayers) {
-  initGame(board, maxX, maxY);
+  init_game(board, maxX, maxY);
   int i;
   for (i = 0; i < nbPlayers; i++) {
     joueurs[i] = add_player(&board, joueurs[i].id, joueurs[i].socket_associe,
@@ -95,7 +95,7 @@ void restart(display_info *board, int maxX, int maxY, player *joueurs,
   }
 }
 
-int checkWinner(player *joueurs) {
+int check_winner(player *joueurs) {
   if (joueurs[0].alive == 0 && joueurs[1].alive == 0) {
     return TIE;
   }
@@ -204,7 +204,7 @@ void update_player_position(display_info *board, player *p) {
 
 void update_game(display_info *board, player *joueurs, int nbr_players) {
   int i;
-  board->winner = checkWinner(joueurs);
+  board->winner = check_winner(joueurs);
   if (board->winner >= 0) {
     game_running = 0;
   } else {

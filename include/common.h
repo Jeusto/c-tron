@@ -30,7 +30,7 @@
 #define TV struct timeval
 
 #define WALL 111
-#define EMPTY -1
+#define EMPTY ' '
 
 #define max(a, b)           \
   ({                        \

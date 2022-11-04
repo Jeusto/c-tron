@@ -29,7 +29,7 @@
 #define KEY_RIGHT_P2 'l'
 #define KEY_TRAIL_P2 'm'
 
-// TODO: temporairement hardcodes
+// temporairement hardcodes
 #define BUF_SIZE 1024
 #define SERVER_PORT 5555
 #define NB_JOUEURS_SUR_CLIENT 2
@@ -75,6 +75,7 @@ void display_character(int color, int y, int x, char character) {
 
 void update_display(display_info *board) {
   clear();
+
   for (int x = 0; x < XMAX; x++) {
     for (int y = 0; y < YMAX; y++) {
       int color = board->board[x][y];
@@ -84,17 +85,14 @@ void update_display(display_info *board) {
         display_character(color, y, x, color);
       }
     }
-    if (board->winner == TIE) {
-      mvprintw(0, 0, "Tie!");
-    } else if (board->winner != NO_WINNER) {
-      mvprintw(0, 0, "Player %d won!", board->winner);
-    }
   }
-  // show info bar of size height 3 with message in the middle
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < XMAX; j++) {
-      display_character(WALL, YMAX, j, ' ');
-    }
+
+  // afficher resultat si la partie est finie
+  if (board->winner == TIE) {
+    mvprintw(YMAX + 1, 1, "Tie!");
+  } else if (board->winner != NO_WINNER) {
+    mvprintw(YMAX + 1, 1, "Player %d won! Congrats! ", board->winner);
   }
+
   refresh();
 }

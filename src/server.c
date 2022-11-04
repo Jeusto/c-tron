@@ -20,7 +20,7 @@ int game_running = 0;
 #include "../include/common.h"
 #include "../include/game-logic.h"
 
-int socket_factory() {
+int create_socket() {
   int master_socket;
   struct sockaddr_in server_addr;
   int opt = 1;
@@ -48,32 +48,32 @@ int socket_factory() {
 int main(int argc, char *argv[]) {
   fd_set master_fds, readfds;
   int list_sockets[MAX_JOUEURS] = {0};
-  int nb_joueurs_sur_ce_client = 0;
-  int nb_joueurs = 0;
-  int nb_clients = 0;
-  int max_fd, new_socket, activity;
+  int nb_joueurs = 0, nb_clients = 0, nb_joueurs_sur_ce_client = 0;
+  int max_fd, master_socket, new_socket, activity;
   struct sockaddr_in client_addr;
   int addr_size = sizeof client_addr;
-  int master_socket;
   int byte_count = 0;
+
   (void)argv;
   (void)argc;
 
-  master_socket = socket_factory();
+  // creer socket principale
+  master_socket = create_socket();
   CHECK(listen(master_socket, MAX_JOUEURS));
+
+  // preparer select
   FD_ZERO(&readfds);
   FD_ZERO(&master_fds);
   FD_SET(STDIN_FILENO, &master_fds);
   FD_SET(master_socket, &master_fds);
   max_fd = master_socket;
 
-  // initialisation du board
+  // initialiser le jeu
   display_info board;
-  initGame(&board, XMAX, YMAX);
+  init_game(&board, XMAX, YMAX);
   player list_joueurs[MAX_JOUEURS];
 
   printf("Waiting for connections or messages...\n");
-
   while (1) {
     readfds = master_fds;
     CHECK(activity = select(max_fd + 1, &readfds, NULL, NULL, NULL));

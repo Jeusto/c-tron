@@ -41,11 +41,9 @@ int convert_key_to_movement(char c) {
 
 int main(int argc, char** argv) {
   struct sockaddr_in server_addr;
-  int socket_fd, max_fd;
-  int activity = 0;
-  int byte_count = 0;
   fd_set readfds;
-  // TODO: temporaire
+  int socket_fd, max_fd;
+  int activity = 0, bytes_received = 0;
   (void)argv;
   (void)argc;
 
@@ -55,7 +53,7 @@ int main(int argc, char** argv) {
   srand(time(NULL));
 
   // creer socket
-  CHECK(socket_fd = socket(AF_INET, SOCK_STREAM, 0));  // todo: utiliser ipv4
+  CHECK(socket_fd = socket(AF_INET, SOCK_STREAM, 0));
   max_fd = socket_fd;
 
   // preparer adresse serveur
@@ -87,11 +85,11 @@ int main(int argc, char** argv) {
     // message recu du serveur
     if (FD_ISSET(socket_fd, &readfds)) {
       display_info info;
-      CHECK(byte_count =
+      CHECK(bytes_received =
                 recv(socket_fd, &info, sizeof(struct display_info), 0));
 
-      // serveur deconnecté
-      if (byte_count == 0) {
+      // serveur deconnecte
+      if (bytes_received == 0) {
         printf("server closed connection\n");
         break;
       }
@@ -100,7 +98,6 @@ int main(int argc, char** argv) {
       else {
         info.winner = ntohl(info.winner);
         // FIXME: temporaire pour tester mais a corriger
-        info.board[0][0] = 111;
 
         update_display(&info);
       }
@@ -109,10 +106,11 @@ int main(int argc, char** argv) {
     // un des joueurs a appuyé sur une touche
     if (FD_ISSET(STDIN_FILENO, &readfds)) {
       char buf[BUF_SIZE];
-      CHECK(byte_count = read(STDIN_FILENO, buf, BUF_SIZE));
-      buf[byte_count] = '\0';
+      CHECK(bytes_received = read(STDIN_FILENO, buf, BUF_SIZE));
+      buf[bytes_received] = '\0';
       int player_id = 0;
 
+      // regarder quel joueur c'est
       if (buf[0] == 'z' || buf[0] == 'q' || buf[0] == 's' || buf[0] == 'd' ||
           buf[0] == ' ') {
         player_id = 0;
@@ -129,8 +127,8 @@ int main(int argc, char** argv) {
           .input = convert_key_to_movement(buf[0]),
       };
       input.id = htonl(input.id);
-      printf("sending input %d to server, player %d, byte_count: %d\n",
-             input.input, input.id, byte_count);
+      printf("sending input %d to server, player %d, bytes_received: %d\n",
+             input.input, input.id, bytes_received);
       CHECK(send(socket_fd, &input, sizeof(struct client_input), 0));
     }
   }

@@ -69,8 +69,8 @@ int main(int argc, char *argv[]) {
   max_fd = master_socket;
 
   // initialiser le jeu
-  display_info board;
-  init_game(&board, XMAX, YMAX);
+  display_info game_info;
+  init_game(&game_info, XMAX, YMAX);
   player list_joueurs[MAX_JOUEURS];
 
   printf("Waiting for connections or messages...\n");
@@ -103,7 +103,7 @@ int main(int argc, char *argv[]) {
       else {
         for (int i = 0; i < nb_joueurs_sur_ce_client; i++) {
           list_joueurs[nb_joueurs++] =
-              add_player(&board, nb_joueurs, new_socket, i);
+              add_player(&game_info, nb_joueurs, new_socket, i);
         }
 
         printf("Adding to list of client sockets\n");
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
           t_arg.nbr_sockets = &nb_clients;
           t_arg.joueurs = list_joueurs;
           t_arg.nbr_players = &nb_joueurs;
-          t_arg.board = &board;
+          t_arg.game_info = &game_info;
           t_arg.game_running = &game_running;
           pthread_create(&thread_jeu, NULL, fonction_thread_jeu, &t_arg);
         }
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
         game_running = 0;
       } else if (strcmp(buf, "restart") == 0) {
         // FIXME: erreur stack smashing detected
-        // restart(&board, XMAX, YMAX, list_joueurs, nb_joueurs);
+        // restart(&game_info, XMAX, YMAX, list_joueurs, nb_joueurs);
       }
     }
 
@@ -185,7 +185,8 @@ int main(int argc, char *argv[]) {
                   list_joueurs[j].id_sur_socket == input.id) {
                 printf("Joueur numero %d, sur socket %d, id sur socket = %d\n",
                        j, client_sd, input.id);
-                update_player_direction(&board, &list_joueurs[j], input.input);
+                update_player_direction(&game_info, &list_joueurs[j],
+                                        input.input);
               }
             }
           }

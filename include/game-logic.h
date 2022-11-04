@@ -28,25 +28,25 @@ typedef struct thread_arg {
   int *nbr_sockets;
   player *joueurs;
   int *nbr_players;
-  display_info *board;
+  display_info *game_info;
   int *game_running;
 } thread_arg;
 
-void init_game(display_info *board, int maxX, int maxY) {
+void init_game(display_info *game_info, int maxX, int maxY) {
   int x, y;
   for (x = 0; x < maxX; x++) {
     for (y = 0; y < maxY; y++) {
       if (x == 0 || x == maxX - 1 || y == 0 || y == maxY - 1) {
-        board->board[x][y] = WALL;
+        game_info->board[x][y] = WALL;
       } else {
-        board->board[x][y] = EMPTY;
+        game_info->board[x][y] = EMPTY;
       }
     }
   }
-  board->winner = -1;
+  game_info->winner = -1;
 }
 
-player add_player(display_info *board, int id_player, int new_socket,
+player add_player(display_info *game_info, int id_player, int new_socket,
                   int id_sur_socket) {
   int maxX = XMAX;
   int maxY = YMAX;
@@ -54,22 +54,22 @@ player add_player(display_info *board, int id_player, int new_socket,
 
   switch (id_player) {
     case 0:
-      board->board[1][1] = id_player;
+      game_info->board[1][1] = id_player;
       new_player.x = 1;
       new_player.y = 1;
       new_player.direction = DOWN;
       break;
     case 1:
-      board->board[maxX - 2][maxY - 2] = id_player;
+      game_info->board[maxX - 2][maxY - 2] = id_player;
       new_player.x = maxX - 2;
       new_player.y = maxY - 2;
       new_player.direction = UP;
       break;
       /*case 2:
-        board.board[maxX/2][1] = id_player;
+        game_info.game_info[maxX/2][1] = id_player;
         break;
       case 3:
-        board.board[1][maxY/2] = id_player;
+        game_info.game_info[1][maxY/2] = id_player;
         break;*/
   }
   new_player.id = id_player;
@@ -83,15 +83,18 @@ player add_player(display_info *board, int id_player, int new_socket,
 }
 
 // supprime un joueur
-void remove_player(display_info *board, player *player) { player->alive = 0; }
+void remove_player(display_info *game_info, player *player) {
+  player->alive = 0;
+}
 
-void restart(display_info *board, int maxX, int maxY, player *joueurs,
+void restart(display_info *game_info, int maxX, int maxY, player *joueurs,
              int nbPlayers) {
-  init_game(board, maxX, maxY);
+  init_game(game_info, maxX, maxY);
   int i;
   for (i = 0; i < nbPlayers; i++) {
-    joueurs[i] = add_player(&board, joueurs[i].id, joueurs[i].socket_associe,
-                            joueurs[i].id_sur_socket);
+    joueurs[i] =
+        add_player(&game_info, joueurs[i].id, joueurs[i].socket_associe,
+                   joueurs[i].id_sur_socket);
   }
 }
 
@@ -110,7 +113,8 @@ int check_winner(player *joueurs) {
 }
 
 // deplace un joueur
-void update_player_direction(display_info *board, player *p, int direction) {
+void update_player_direction(display_info *game_info, player *p,
+                             int direction) {
   // on autorise pas de revenir en arriere, c'est a dire si le joueur va a
   // gauche il peut pas directement aller a droite comme dans le snake classique
   switch (direction) {
@@ -140,22 +144,22 @@ void update_player_direction(display_info *board, player *p, int direction) {
   }
 }
 
-void check_collision(display_info *board, player *p, int x, int y) {
+void check_collision(display_info *game_info, player *p, int x, int y) {
   // check collission
-  if (board->board[x][y] != EMPTY) {
-    remove_player(board, p);
+  if (game_info->board[x][y] != EMPTY) {
+    remove_player(game_info, p);
   }
 }
 
-void update_player_position(display_info *board, player *p) {
+void update_player_position(display_info *game_info, player *p) {
   int x = p->x;
   int y = p->y;
   int id = p->id;
 
   if (p->trail_up == 1) {
-    board->board[x][y] = 50 + id;
+    game_info->board[x][y] = 50 + id;
   } else {
-    board->board[x][y] = EMPTY;
+    game_info->board[x][y] = EMPTY;
   }
 
   // remove all trail if trail_up == 0
@@ -163,8 +167,8 @@ void update_player_position(display_info *board, player *p) {
     int i, j;
     for (i = 0; i < XMAX; i++) {
       for (j = 0; j < YMAX; j++) {
-        if (board->board[i][j] == 50 + id) {
-          board->board[i][j] = EMPTY;
+        if (game_info->board[i][j] == 50 + id) {
+          game_info->board[i][j] = EMPTY;
         }
       }
     }
@@ -175,23 +179,23 @@ void update_player_position(display_info *board, player *p) {
   // collission joueur par jouer ?)
   switch (p->direction) {
     case UP:
-      check_collision(board, p, x, y - 1);
-      board->board[x][y - 1] = id;
+      check_collision(game_info, p, x, y - 1);
+      game_info->board[x][y - 1] = id;
       p->y -= 1;
       break;
     case DOWN:
-      check_collision(board, p, x, y + 1);
-      board->board[x][y + 1] = id;
+      check_collision(game_info, p, x, y + 1);
+      game_info->board[x][y + 1] = id;
       p->y += 1;
       break;
     case LEFT:
-      check_collision(board, p, x - 1, y);
-      board->board[x - 1][y] = id;
+      check_collision(game_info, p, x - 1, y);
+      game_info->board[x - 1][y] = id;
       p->x -= 1;
       break;
     case RIGHT:
-      check_collision(board, p, x + 1, y);
-      board->board[x + 1][y] = id;
+      check_collision(game_info, p, x + 1, y);
+      game_info->board[x + 1][y] = id;
       p->x += 1;
       break;
   }
@@ -199,27 +203,27 @@ void update_player_position(display_info *board, player *p) {
 
 /*
 1 : regarde si la partie est finie
-2 : update le board
+2 : update le game_info
 */
 
-void update_game(display_info *board, player *joueurs, int nbr_players) {
+void update_game(display_info *game_info, player *joueurs, int nbr_players) {
   int i;
-  board->winner = check_winner(joueurs);
-  if (board->winner >= 0) {
+  game_info->winner = check_winner(joueurs);
+  if (game_info->winner >= 0) {
     game_running = 0;
   } else {
     for (i = 0; i < nbr_players; i++) {
       if (joueurs[i].alive == 1) {
-        update_player_position(board, &joueurs[i]);
+        update_player_position(game_info, &joueurs[i]);
       }
     }
   }
 }
 
-void send_board_to_all_clients(display_info *board, int sockets[],
+void send_board_to_all_clients(display_info *game_info, int sockets[],
                                int nbr_sockets) {
   display_info board_copy;
-  memcpy(&board_copy, board, sizeof(display_info));
+  memcpy(&board_copy, game_info, sizeof(display_info));
   board_copy.winner = htonl(board_copy.winner);
 
   for (int i = 0; i < nbr_sockets; i++) {
@@ -236,8 +240,8 @@ void *fonction_thread_jeu(void *arg) {
   while (1) {
     // update game
     if (*t_arg->game_running == 1) {
-      update_game(t_arg->board, t_arg->joueurs, *t_arg->nbr_players);
-      send_board_to_all_clients(t_arg->board, t_arg->sockets,
+      update_game(t_arg->game_info, t_arg->joueurs, *t_arg->nbr_players);
+      send_board_to_all_clients(t_arg->game_info, t_arg->sockets,
                                 *t_arg->nbr_sockets);
       usleep(REFRESH_RATE * 1000);
     } else {

@@ -73,12 +73,13 @@ void display_character(int color, int y, int x, char character) {
   attroff(COLOR_PAIR(color));
 }
 
-void update_display(display_info *board) {
+void update_display(display_info *game_info) {
   clear();
 
   for (int x = 0; x < XMAX; x++) {
     for (int y = 0; y < YMAX; y++) {
-      int color = board->board[x][y];
+      int color = game_info->board[x][y];
+
       if (color >= 0 && color < NB_COLORS) {
         display_character(color, y, x, 'o');
       } else {
@@ -88,10 +89,10 @@ void update_display(display_info *board) {
   }
 
   // afficher resultat si la partie est finie
-  if (board->winner == TIE) {
+  if (game_info->winner == TIE) {
     mvprintw(YMAX + 1, 1, "Tie!");
-  } else if (board->winner != NO_WINNER) {
-    mvprintw(YMAX + 1, 1, "Player %d won! Congrats! ", board->winner);
+  } else if (game_info->winner != NO_WINNER) {
+    mvprintw(YMAX + 1, 1, "Player %d won! Congrats! ", game_info->winner);
   }
 
   refresh();

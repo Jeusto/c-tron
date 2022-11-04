@@ -84,9 +84,9 @@ int main(int argc, char** argv) {
 
     // message recu du serveur
     if (FD_ISSET(socket_fd, &readfds)) {
-      display_info info;
+      display_info game_info;
       CHECK(bytes_received =
-                recv(socket_fd, &info, sizeof(struct display_info), 0));
+                recv(socket_fd, &game_info, sizeof(struct display_info), 0));
 
       // serveur deconnecte
       if (bytes_received == 0) {
@@ -96,10 +96,10 @@ int main(int argc, char** argv) {
 
       // mettre a jour l'affichage
       else {
-        info.winner = ntohl(info.winner);
+        game_info.winner = ntohl(game_info.winner);
         // FIXME: temporaire pour tester mais a corriger
 
-        update_display(&info);
+        update_display(&game_info);
       }
     }
 

@@ -1,6 +1,6 @@
 .vscode
 .idea
-valrind-out.txt
+valgrind-out.txt
 build
 *.exe
 *.out

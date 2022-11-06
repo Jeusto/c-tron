@@ -7,14 +7,14 @@
 #define TRAIL_INDEX_SHIFT 50
 
 #define BLUE_ON_BLACK 0
-#define RED_ON_BLACK 2
 #define YELLOW_ON_BLACK 1
+#define RED_ON_BLACK 2
 #define MAGENTA_ON_BLACK 3
 #define CYAN_ON_BLACK 4
 
 #define BLUE_ON_BLUE 50
-#define RED_ON_RED 52
 #define YELLOW_ON_YELLOW 51
+#define RED_ON_RED 52
 #define MAGENTA_ON_MAGENTA 53
 #define CYAN_ON_CYAN 54
 
@@ -29,10 +29,35 @@
 #define KEY_RIGHT_P2 'l'
 #define KEY_TRAIL_P2 'm'
 
-// temporairement hardcodes
 #define BUF_SIZE 1024
-#define SERVER_PORT 5555
-#define NB_JOUEURS_SUR_CLIENT 2
+
+void update_display(display_info *game_info) {
+  clear();
+
+  // Afficher le plateau
+  for (int x = 0; x < XMAX; x++) {
+    for (int y = 0; y < YMAX; y++) {
+      int color = game_info->board[x][y];
+
+      if (color >= 0 && color < NB_COLORS) {
+        display_character(color, y, x, '0' + color);
+      } else {
+        display_character(color, y, x, color);
+      }
+    }
+  }
+
+  // Afficher le resultat si la partie est finie
+  if (game_info->winner == TIE) {
+    mvprintw(YMAX + 1, 1, "Tie!");
+  } else if (game_info->winner != NO_WINNER) {
+    mvprintw(YMAX + 1, 1,
+             "Player %d won! Wait for the server to restart a game or leave!",
+             game_info->winner);
+  }
+
+  refresh();
+}
 
 void tune_terminal() {
   struct termios term;
@@ -71,29 +96,4 @@ void display_character(int color, int y, int x, char character) {
   attron(COLOR_PAIR(color));
   mvaddch(y, x, character);
   attroff(COLOR_PAIR(color));
-}
-
-void update_display(display_info *game_info) {
-  clear();
-
-  for (int x = 0; x < XMAX; x++) {
-    for (int y = 0; y < YMAX; y++) {
-      int color = game_info->board[x][y];
-
-      if (color >= 0 && color < NB_COLORS) {
-        display_character(color, y, x, '0' + color);
-      } else {
-        display_character(color, y, x, color);
-      }
-    }
-  }
-
-  // afficher resultat si la partie est finie
-  if (game_info->winner == TIE) {
-    mvprintw(YMAX + 1, 1, "Tie!");
-  } else if (game_info->winner != NO_WINNER) {
-    mvprintw(YMAX + 1, 1, "Player %d won! Congrats! ", game_info->winner);
-  }
-
-  refresh();
 }

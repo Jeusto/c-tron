@@ -21,24 +21,21 @@ int game_running = 0;
 #include "../include/game-logic.h"
 
 int create_socket() {
-  int master_socket;
   struct sockaddr_in server_addr;
-  int opt = 1;
+  int master_socket, opt = 1;
 
-  // creer socket principale
+  // Creer et configurer socket principal
   CHECK(master_socket = socket(AF_INET, SOCK_STREAM, 0));
-
-  // accepter plusieurs connexions
   CHECK(setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt,
                    sizeof(opt)));
 
-  // preparer adresse serveur
+  // Preparer adresse serveur
   memset(&server_addr, 0, sizeof(server_addr));
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(SERVER_PORT);
   server_addr.sin_addr.s_addr = INADDR_ANY;
 
-  // associer socket a adresse
+  // Associer socket a l'adresse
   CHECK(bind(master_socket, (struct sockaddr *)&server_addr,
              sizeof(server_addr)));
 
@@ -46,53 +43,58 @@ int create_socket() {
 }
 
 int main(int argc, char *argv[]) {
-  fd_set master_fds, readfds;
-  int list_sockets[MAX_JOUEURS] = {0};
   int nb_joueurs = 0, nb_clients = 0, nb_joueurs_sur_ce_client = 0;
   int max_fd, master_socket, new_socket, activity;
+  int list_sockets[MAX_JOUEURS] = {0};
+  player list_joueurs[MAX_JOUEURS];
+  int bytes_received = 0;
+  fd_set master_fds, read_fds;
   struct sockaddr_in client_addr;
   int addr_size = sizeof client_addr;
-  int byte_count = 0;
+  display_info game_info;
 
-  (void)argv;
-  (void)argc;
+  // Verifier le nombre d'arguments
+  // if (argc != 3) {
+  //   printf("Usage: %s [port_serveur] [refresh_rate] \n", argv[0]);
+  //   exit(EXIT_FAILURE);
+  // }
 
-  // creer socket principale
+  // Creer et configurer socket principal
   master_socket = create_socket();
   CHECK(listen(master_socket, MAX_JOUEURS));
 
-  // preparer select
-  FD_ZERO(&readfds);
+  // Preparer select
+  FD_ZERO(&read_fds);
   FD_ZERO(&master_fds);
   FD_SET(STDIN_FILENO, &master_fds);
   FD_SET(master_socket, &master_fds);
   max_fd = master_socket;
 
-  // initialiser le jeu
-  display_info game_info;
+  // Iitialiser le jeu
   init_game(&game_info, XMAX, YMAX);
-  player list_joueurs[MAX_JOUEURS];
 
+  // Boucle pour attendre des messages, des commandes et lancer le jeu
   printf("Waiting for connections or messages...\n");
   while (1) {
-    readfds = master_fds;
-    CHECK(activity = select(max_fd + 1, &readfds, NULL, NULL, NULL));
+    // Attendre une activite
+    read_fds = master_fds;
+    CHECK(activity = select(max_fd + 1, &read_fds, NULL, NULL, NULL));
 
-    // si evenement sur le socket principal, c'est une nouvelle connexion
-    if (FD_ISSET(master_socket, &readfds)) {
+    // Evenement sur le socket principal = nouvelle tentative de connexion
+    if (FD_ISSET(master_socket, &read_fds)) {
       printf("Nouvelle connexion\n");
       CHECK(new_socket = accept(master_socket, (struct sockaddr *)&client_addr,
                                 (socklen_t *)&addr_size));
 
-      // recevoir nombre de joueurs sur ce client
+      // Recevoir le nombre de joueurs sur ce client
       struct client_init_infos init_info;
-      CHECK(byte_count = recv(new_socket, &init_info,
-                              sizeof(struct client_init_infos), 0));
+      CHECK(bytes_received = recv(new_socket, &init_info,
+                                  sizeof(struct client_init_infos), 0));
 
       nb_joueurs_sur_ce_client = ntohl(init_info.nb_players);
       printf("nb_joueurs_sur_ce_client : %d\n", nb_joueurs_sur_ce_client);
 
-      // refuser si trop de joueurs ou plus de 2 joueurs
+      // Refuser si trop de joueurs
       if (nb_joueurs + nb_joueurs_sur_ce_client > MAX_JOUEURS ||
           nb_joueurs_sur_ce_client > 2) {
         printf("New connection denied\n");
@@ -134,7 +136,7 @@ int main(int argc, char *argv[]) {
     }
 
     // TODO: evenement entree standard (verifier si quit ou restart)
-    if (FD_ISSET(STDIN_FILENO, &readfds)) {
+    if (FD_ISSET(STDIN_FILENO, &read_fds)) {
       char buf[BUF_SIZE];
       fgets(buf, BUF_SIZE, stdin);
       buf[strlen(buf) - 1] = '\0';
@@ -156,23 +158,23 @@ int main(int argc, char *argv[]) {
         printf("joueur = %d, socket = %d\n", i, list_sockets[i]);
 
         int client_sd = list_sockets[i];
-        int byte_count = 0;
-        if (FD_ISSET(client_sd, &readfds)) {
+        int bytes_received = 0;
+        if (FD_ISSET(client_sd, &read_fds)) {
           struct client_input input;
           // FIXME: recv peut faire lecture partielle donc faire une boucle ou
           // utiliser MSG_WAITALL ?
-          CHECK(byte_count =
+          CHECK(bytes_received =
                     recv(client_sd, &input, sizeof(struct client_input), 0));
           input.id = ntohl(input.id);
           printf("Recu un input du socket %d, joueur id = %d\n", client_sd,
                  input.id);
 
-          if (byte_count == 0) {
+          if (bytes_received == 0) {
             // deconnexion
             printf("Client with socket %d deconnected\n", client_sd);
             // supprimer le socket de la liste
             close(client_sd);
-            // remove_player(board, &list_joueurs);
+            // kill_player(board, &list_joueurs);
             nb_joueurs--;  // FIXME: verifier si 1 ou 2 joueurs ont deco
             nb_clients--;
             FD_CLR(client_sd, &master_fds);

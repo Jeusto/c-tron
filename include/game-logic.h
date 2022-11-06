@@ -9,7 +9,7 @@
 #define BUF_SIZE 1024
 #define MAX_JOUEURS 2
 #define SERVER_PORT 5555
-#define REFRESH_RATE 500
+#define REFRESH_RATE 300
 
 typedef struct player {
   int id;
@@ -17,7 +17,7 @@ typedef struct player {
   int y;
   int trail_up;
   int direction;
-  int alive;
+  int isAlive;
   int socket_associe;
   int id_sur_socket;
 } player;
@@ -65,17 +65,17 @@ player add_player(display_info *game_info, int id_player, int new_socket,
       new_player.y = maxY - 2;
       new_player.direction = UP;
       break;
-      /*case 2:
-        game_info.game_info[maxX/2][1] = id_player;
-        break;
-      case 3:
-        game_info.game_info[1][maxY/2] = id_player;
-        break;*/
+      // case 2:
+      //   game_info->board[maxX / 2][1] = id_player;
+      //   break;
+      // case 3:
+      //   game_info->board[1][maxY / 2] = id_player;
+      //   break;
   }
   new_player.id = id_player;
   // trail actif par defaut
   new_player.trail_up = 1;
-  new_player.alive = 1;
+  new_player.isAlive = 1;
   new_player.socket_associe = new_socket;
   new_player.id_sur_socket = id_sur_socket;
 
@@ -83,8 +83,8 @@ player add_player(display_info *game_info, int id_player, int new_socket,
 }
 
 // supprime un joueur
-void remove_player(display_info *game_info, player *player) {
-  player->alive = 0;
+void kill_player(display_info *game_info, player *player) {
+  player->isAlive = 0;
 }
 
 void restart(display_info *game_info, int maxX, int maxY, player *joueurs,
@@ -98,21 +98,31 @@ void restart(display_info *game_info, int maxX, int maxY, player *joueurs,
   }
 }
 
-int check_winner(player *joueurs) {
-  if (joueurs[0].alive == 0 && joueurs[1].alive == 0) {
+int check_winner(display_info *game_info, player *joueurs, int nbr_players) {
+  // si un joueur est mort, on verifie qu'un autre ne serait pas mort au meme
+  // moment
+  if (!joueurs[0].isAlive || !joueurs[1].isAlive) {
+    int i;
+    for (i = 0; i < nbr_players; i++) {
+      if (joueurs[i].isAlive) {
+        update_player_position(game_info, &joueurs[i]);
+      }
+    }
+  }
+
+  if (joueurs[0].isAlive == 0 && joueurs[1].isAlive == 0) {
     return TIE;
   }
-  if (joueurs[0].alive == 0) {
+  if (joueurs[0].isAlive == 0) {
     return joueurs[1].id;
   }
-  if (joueurs[1].alive == 0) {
+  if (joueurs[1].isAlive == 0) {
     return joueurs[0].id;
   }
 
   return -1;
 }
 
-// deplace un joueur
 void update_player_direction(display_info *game_info, player *p,
                              int direction) {
   // on autorise pas de revenir en arriere, c'est a dire si le joueur va a
@@ -147,7 +157,8 @@ void update_player_direction(display_info *game_info, player *p,
 void check_collision(display_info *game_info, player *p, int x, int y) {
   // check collission
   if (game_info->board[x][y] != EMPTY) {
-    remove_player(game_info, p);
+    printf("🚨 player %d collided\n", p->id);
+    kill_player(game_info, p);
   }
 }
 
@@ -155,12 +166,6 @@ void update_player_position(display_info *game_info, player *p) {
   int x = p->x;
   int y = p->y;
   int id = p->id;
-
-  if (p->trail_up == 1) {
-    game_info->board[x][y] = 50 + id;
-  } else {
-    game_info->board[x][y] = EMPTY;
-  }
 
   // remove all trail if trail_up == 0
   if (p->trail_up == 0) {
@@ -174,46 +179,58 @@ void update_player_position(display_info *game_info, player *p) {
     }
   }
 
-  // FIXME: a l'heure actuelle si les deux joueurs se rentrent dedans, le
-  // joueur, y en a un qui gagne au lieu d'avoir egalite (parce qu'on check
-  // collission joueur par jouer ?)
   switch (p->direction) {
     case UP:
       check_collision(game_info, p, x, y - 1);
-      game_info->board[x][y - 1] = id;
-      p->y -= 1;
+      if (p->isAlive == 1) {
+        game_info->board[x][y - 1] = id;
+        p->y--;
+      }
       break;
     case DOWN:
       check_collision(game_info, p, x, y + 1);
-      game_info->board[x][y + 1] = id;
-      p->y += 1;
+      if (p->isAlive == 1) {
+        game_info->board[x][y + 1] = id;
+        p->y += 1;
+      }
       break;
     case LEFT:
       check_collision(game_info, p, x - 1, y);
-      game_info->board[x - 1][y] = id;
-      p->x -= 1;
+      if (p->isAlive == 1) {
+        game_info->board[x - 1][y] = id;
+        p->x -= 1;
+      }
       break;
     case RIGHT:
       check_collision(game_info, p, x + 1, y);
-      game_info->board[x + 1][y] = id;
-      p->x += 1;
+      if (p->isAlive == 1) {
+        game_info->board[x + 1][y] = id;
+        p->x += 1;
+      }
       break;
+  }
+
+  if (p->trail_up == 1 && p->isAlive) {
+    game_info->board[x][y] = 50 + id;
+  } else if (p->isAlive) {
+    game_info->board[x][y] = EMPTY;
   }
 }
 
-/*
-1 : regarde si la partie est finie
-2 : update le game_info
-*/
-
 void update_game(display_info *game_info, player *joueurs, int nbr_players) {
   int i;
-  game_info->winner = check_winner(joueurs);
+  game_info->winner = check_winner(game_info, joueurs, nbr_players);
+
   if (game_info->winner >= 0) {
+    printf("🏆 player %d won\n", game_info->winner);
+    game_running = 0;
+  } else if (game_info->winner == TIE) {
+    printf("🪢 Tie\n");
     game_running = 0;
   } else {
     for (i = 0; i < nbr_players; i++) {
-      if (joueurs[i].alive == 1) {
+      if (joueurs[i].isAlive == 1) {
+        printf("Updating pos for player %d\n", joueurs[i].id);
         update_player_position(game_info, &joueurs[i]);
       }
     }

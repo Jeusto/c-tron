@@ -8,6 +8,30 @@
 #include "../include/common.h"
 #include "../include/display.h"
 
+int get_player_corresponding_to_key(char key) {
+  int player_id = -1;
+
+  switch (key) {
+    case KEY_UP_P1:
+    case KEY_DOWN_P1:
+    case KEY_LEFT_P1:
+    case KEY_RIGHT_P1:
+    case KEY_TRAIL_P1:
+      player_id = 0;
+      break;
+
+    case KEY_UP_P2:
+    case KEY_DOWN_P2:
+    case KEY_LEFT_P2:
+    case KEY_RIGHT_P2:
+    case KEY_TRAIL_P2:
+      player_id = 1;
+      break;
+  }
+
+  return player_id;
+}
+
 int convert_key_to_movement(char c) {
   int input = -1;
 
@@ -40,96 +64,85 @@ int convert_key_to_movement(char c) {
 }
 
 int main(int argc, char** argv) {
+  int socket_fd, max_fd, activity = 0, bytes_received = 0;
   struct sockaddr_in server_addr;
-  fd_set readfds;
-  int socket_fd, max_fd;
-  int activity = 0, bytes_received = 0;
-  (void)argv;
-  (void)argc;
+  fd_set read_fds;
 
-  // init display
+  // Verifier le nombre d'arguments
+  if (argc != 4) {
+    printf("Usage: %s [IP_serveur] [port_serveur] [nb_joueurs] \n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
+
+  // Initialiser l'affichage
   tune_terminal();
   init_graphics();
   srand(time(NULL));
 
-  // creer socket
+  // Creer socket
   CHECK(socket_fd = socket(AF_INET, SOCK_STREAM, 0));
   max_fd = socket_fd;
 
-  // preparer adresse serveur
+  // Preparer adresse serveur
   memset(&server_addr, 0, sizeof(server_addr));
   server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(SERVER_PORT);
-  server_addr.sin_addr.s_addr = INADDR_ANY;
+  server_addr.sin_port = htons(atoi(argv[2]));
+  inet_aton(argv[1], &(server_addr.sin_addr));
 
-  // se connecter au serveur
+  // Se connecter au serveur
   CHECK(
       connect(socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)));
 
-  // envoyer nombre de joueurs sur ce client au serveur
+  // Envoyer nombre de joueurs sur ce client au serveur
   struct client_init_infos init_info = {
-      .nb_players = htonl(NB_JOUEURS_SUR_CLIENT),
+      .nb_players = htonl(atoi(argv[3])),
   };
   CHECK(send(socket_fd, &init_info, sizeof(struct client_init_infos), 0));
 
-  // boucle pour attendre messages du serveur et afficher le jeu
+  // Boucle pour attendre des messages du serveur et afficher le jeu
   while (1) {
-    // preparer select
-    FD_ZERO(&readfds);
-    FD_SET(STDIN_FILENO, &readfds);
-    FD_SET(socket_fd, &readfds);
+    // Preparer select
+    FD_ZERO(&read_fds);
+    FD_SET(STDIN_FILENO, &read_fds);
+    FD_SET(socket_fd, &read_fds);
 
-    // attendre activite
-    CHECK(activity = select(max_fd + 1, &readfds, NULL, NULL, NULL));
+    // Attendre une activite
+    CHECK(activity = select(max_fd + 1, &read_fds, NULL, NULL, NULL));
 
-    // message recu du serveur
-    if (FD_ISSET(socket_fd, &readfds)) {
+    // Message recu du serveur
+    if (FD_ISSET(socket_fd, &read_fds)) {
       display_info game_info;
       CHECK(bytes_received =
                 recv(socket_fd, &game_info, sizeof(struct display_info), 0));
 
-      // serveur deconnecte
+      // 0 bytes recu = serveur deconnecte
       if (bytes_received == 0) {
         printf("server closed connection\n");
         break;
       }
 
-      // mettre a jour l'affichage
+      // Message recu = mettre a jour l'affichage
       else {
         game_info.winner = ntohl(game_info.winner);
-        // FIXME: temporaire pour tester mais a corriger
-
         update_display(&game_info);
       }
     }
 
-    // un des joueurs a appuyé sur une touche
-    if (FD_ISSET(STDIN_FILENO, &readfds)) {
+    // Un des joueurs a appuye sur une touche
+    if (FD_ISSET(STDIN_FILENO, &read_fds)) {
       char buf[BUF_SIZE];
       CHECK(bytes_received = read(STDIN_FILENO, buf, BUF_SIZE));
       buf[bytes_received] = '\0';
-      int player_id = 0;
 
-      // regarder quel joueur c'est
-      if (buf[0] == 'z' || buf[0] == 'q' || buf[0] == 's' || buf[0] == 'd' ||
-          buf[0] == ' ') {
-        player_id = 0;
-      } else if (NB_JOUEURS_SUR_CLIENT == 2 && buf[0] == 'i' || buf[0] == 'j' ||
-                 buf[0] == 'k' || buf[0] == 'l' || buf[0] == 'm') {
-        player_id = 1;
-      } else {
-        continue;
-      }
-
-      // envoyer touche au serveur
-      struct client_input input = {
-          .id = player_id,
+      struct client_input client_input = {
+          .id = htonl(get_player_corresponding_to_key(buf[0])),
           .input = convert_key_to_movement(buf[0]),
       };
-      input.id = htonl(input.id);
-      printf("sending input %d to server, player %d, bytes_received: %d\n",
-             input.input, input.id, bytes_received);
-      CHECK(send(socket_fd, &input, sizeof(struct client_input), 0));
+
+      // Envoyer touche au serveur si c'est valide
+      if (client_input.id != -1 && client_input.input != -1) {
+        CHECK(send(socket_fd, &client_input, sizeof(struct client_input), 0));
+      }
     }
   }
 

@@ -2,16 +2,19 @@ CC = gcc
 CFLAGS = -Wall -Wextra -g -std=c99 -pedantic # ajouter -Werror avant rendu
 LFLAGS = -lncurses
 BUILDDIR = build
+OBJDIR = obj
 SRCDIR = src
+DEPS = $(OBJDIR)/display.h
 
-all: create_build_dir client server
+%.o: %.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
 
-create_build_dir:
+create_dir:
 	mkdir -p $(BUILDDIR)
+	mkdir -p $(OBJDIR)
 
-client:
-	gcc -o build/server src/server.c
-	$(CC) $(CFLAGS) -o ./$(BUILDDIR)/client ./$(SRCDIR)/client.c $(LFLAGS)
+client: $(OBJDIR)/client.o $(OBJDIR)/display.o
+	$(CC) $(CFLAGS) -o ./$(BUILDDIR)/client $(OBJDIR)/client.o $(OBJDIR)/display.o $(LFLAGS)
 
 server:
 	$(CC) $(CFLAGS) -o ./$(BUILDDIR)/server ./$(SRCDIR)/server.c $(LFLAGS)

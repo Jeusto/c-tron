@@ -15,7 +15,6 @@
 #include <unistd.h>
 
 // TODO: ne pas utiliser de variable globale
-int game_running = 0;
 
 #include "../include/common.h"
 #include "../include/game-logic.h"
@@ -52,6 +51,7 @@ int main(int argc, char *argv[]) {
   struct sockaddr_in client_addr;
   int addr_size = sizeof client_addr;
   display_info game_info;
+  int game_running = 0;
 
   // Verifier le nombre d'arguments
   // if (argc != 3) {
@@ -71,14 +71,17 @@ int main(int argc, char *argv[]) {
   max_fd = master_socket;
 
   // Iitialiser le jeu
-  init_game(&game_info, XMAX, YMAX);
+  init_board(&game_info, XMAX, YMAX);
 
   // Boucle pour attendre des messages, des commandes et lancer le jeu
   printf("Waiting for connections or messages...\n");
+
+  int t = 0;
   while (1) {
     // Attendre une activite
     read_fds = master_fds;
-    CHECK(activity = select(max_fd + 1, &read_fds, NULL, NULL, NULL));
+    struct timeval tv = {1, REFRESH_RATE * 1000};
+    CHECK(activity = select(max_fd + 1, &read_fds, NULL, NULL, &tv));
 
     // Evenement sur le socket principal = nouvelle tentative de connexion
     if (FD_ISSET(master_socket, &read_fds)) {
@@ -104,8 +107,9 @@ int main(int argc, char *argv[]) {
       // sinon, accepter
       else {
         for (int i = 0; i < nb_joueurs_sur_ce_client; i++) {
-          list_joueurs[nb_joueurs++] =
+          list_joueurs[nb_joueurs] =
               add_player(&game_info, nb_joueurs, new_socket, i);
+          nb_joueurs++;
         }
 
         printf("Adding to list of client sockets\n");
@@ -118,25 +122,11 @@ int main(int argc, char *argv[]) {
         // si max joueurs atteint, lancer le jeu
         if (nb_joueurs == MAX_JOUEURS) {
           game_running = 1;
-
-          // lancement du thread de jeu
-          pthread_t thread_jeu;
-          thread_arg t_arg;
-          // TODO: gerer section critique, mutex ou pas ?
-          t_arg.socket = master_socket;
-          t_arg.sockets = list_sockets;
-          t_arg.nbr_sockets = &nb_clients;
-          t_arg.joueurs = list_joueurs;
-          t_arg.nbr_players = &nb_joueurs;
-          t_arg.game_info = &game_info;
-          t_arg.game_running = &game_running;
-          pthread_create(&thread_jeu, NULL, fonction_thread_jeu, &t_arg);
         }
       }
     }
 
-    // TODO: evenement entree standard (verifier si quit ou restart)
-    if (FD_ISSET(STDIN_FILENO, &read_fds)) {
+    else if (FD_ISSET(STDIN_FILENO, &read_fds)) {
       char buf[BUF_SIZE];
       fgets(buf, BUF_SIZE, stdin);
       buf[strlen(buf) - 1] = '\0';
@@ -145,13 +135,14 @@ int main(int argc, char *argv[]) {
         exit(0);
         game_running = 0;
       } else if (strcmp(buf, "restart") == 0) {
-        // FIXME: erreur stack smashing detected
-        // restart(&game_info, XMAX, YMAX, list_joueurs, nb_joueurs);
+        printf("Restarting...\n");
+        restart(&game_info, XMAX, YMAX, list_joueurs, nb_joueurs,
+                &game_running);
       }
     }
 
     // parcourir les list_sockets pour voir s'il y a des messages
-    if (game_running) {
+    else if (game_running) {
       printf("Parcourir list_sockets\n");
 
       for (int i = 0; i < nb_clients; i++) {
@@ -161,8 +152,6 @@ int main(int argc, char *argv[]) {
         int bytes_received = 0;
         if (FD_ISSET(client_sd, &read_fds)) {
           struct client_input input;
-          // FIXME: recv peut faire lecture partielle donc faire une boucle ou
-          // utiliser MSG_WAITALL ?
           CHECK(bytes_received =
                     recv(client_sd, &input, sizeof(struct client_input), 0));
           input.id = ntohl(input.id);
@@ -174,12 +163,20 @@ int main(int argc, char *argv[]) {
             printf("Client with socket %d deconnected\n", client_sd);
             // supprimer le socket de la liste
             close(client_sd);
-            // kill_player(board, &list_joueurs);
-            nb_joueurs--;  // FIXME: verifier si 1 ou 2 joueurs ont deco
-            nb_clients--;
+            for (int j = 0; j < nb_joueurs; j++) {
+              if (list_joueurs[j].socket_associe == client_sd) {
+                nb_joueurs--;
+                kill_player(&game_info, &list_joueurs[j]);
+              }
+            }
             FD_CLR(client_sd, &master_fds);
             list_sockets[i] = 0;
-            max_fd--;
+
+            if (client_sd == max_fd) {
+              for (int j = 0; j < nb_clients; j++) {
+                if (list_sockets[j] > max_fd) max_fd = list_sockets[j];
+              }
+            }
           } else {
             // message recu
             for (int j = 0; j < nb_joueurs; j++) {
@@ -193,6 +190,14 @@ int main(int argc, char *argv[]) {
             }
           }
         }
+      }
+    }
+
+    if (game_running) {
+      printf("jeu\n");
+      if (game_running == 1) {
+        update_game(&game_info, &list_joueurs, nb_joueurs, &game_running);
+        send_board_to_all_clients(&game_info, list_sockets, nb_clients);
       }
     }
   }

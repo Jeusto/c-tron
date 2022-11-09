@@ -1,5 +1,3 @@
-// TODO: separer declarations dans.h et implementations dans.c puis modifier le
-// makefile
 #include <pthread.h>
 #include <unistd.h>
 
@@ -9,7 +7,7 @@
 #define BUF_SIZE 1024
 #define MAX_JOUEURS 2
 #define SERVER_PORT 5555
-#define REFRESH_RATE 300
+#define REFRESH_RATE 100
 
 typedef struct player {
   int id;
@@ -22,17 +20,8 @@ typedef struct player {
   int id_sur_socket;
 } player;
 
-typedef struct thread_arg {
-  int socket;
-  int *sockets;
-  int *nbr_sockets;
-  player *joueurs;
-  int *nbr_players;
-  display_info *game_info;
-  int *game_running;
-} thread_arg;
-
-void init_game(display_info *game_info, int maxX, int maxY) {
+void init_board(display_info *game_info, int maxX, int maxY) {
+  printf("init board\n");
   int x, y;
   for (x = 0; x < maxX; x++) {
     for (y = 0; y < maxY; y++) {
@@ -48,6 +37,7 @@ void init_game(display_info *game_info, int maxX, int maxY) {
 
 player add_player(display_info *game_info, int id_player, int new_socket,
                   int id_sur_socket) {
+  printf("add_player %d\n", id_player);
   int maxX = XMAX;
   int maxY = YMAX;
   player new_player;
@@ -83,24 +73,49 @@ player add_player(display_info *game_info, int id_player, int new_socket,
 }
 
 // supprime un joueur
+void remove_player(display_info *game_info, player *list_joueurs,
+                   int *nb_joueurs, int id_player) {
+  printf("remove_player %d\n", id_player);
+}
+
 void kill_player(display_info *game_info, player *player) {
   player->isAlive = 0;
 }
 
-void restart(display_info *game_info, int maxX, int maxY, player *joueurs,
-             int nbPlayers) {
-  init_game(game_info, maxX, maxY);
+void reset_players(display_info *game_info, player *lst_joueurs, int maxX,
+                   int maxY) {
   int i;
-  for (i = 0; i < nbPlayers; i++) {
-    joueurs[i] =
-        add_player(&game_info, joueurs[i].id, joueurs[i].socket_associe,
-                   joueurs[i].id_sur_socket);
+  for (i = 0; i < MAX_JOUEURS; i++) {
+    lst_joueurs[i].isAlive = 1;
+    switch (lst_joueurs[i].id) {
+      case 0:
+        game_info->board[1][1] = lst_joueurs[i].id;
+        lst_joueurs[i].x = 1;
+        lst_joueurs[i].y = 1;
+        lst_joueurs[i].direction = DOWN;
+        break;
+      case 1:
+        game_info->board[maxX - 2][maxY - 2] = lst_joueurs[i].id;
+        lst_joueurs[i].x = maxX - 2;
+        lst_joueurs[i].y = maxY - 2;
+        lst_joueurs[i].direction = UP;
+        break;
+    }
   }
 }
 
+void restart(display_info *game_info, int maxX, int maxY, player *lst_joueurs,
+             int nbPlayers, int *game_running) {
+  *game_running = 0;
+  init_board(game_info, maxX, maxY);
+  reset_players(game_info, lst_joueurs, maxX, maxY);
+  *game_running = 1;
+}
+
 int check_winner(display_info *game_info, player *joueurs, int nbr_players) {
-  // si un joueur est mort, on verifie qu'un autre ne serait pas mort au meme
-  // moment
+  // si un joueur est mort, on verifie qu'un autre ne serait pas mort au
+  // meme moment
+  printf("CheckWinner\n");
   if (!joueurs[0].isAlive || !joueurs[1].isAlive) {
     int i;
     for (i = 0; i < nbr_players; i++) {
@@ -126,7 +141,9 @@ int check_winner(display_info *game_info, player *joueurs, int nbr_players) {
 void update_player_direction(display_info *game_info, player *p,
                              int direction) {
   // on autorise pas de revenir en arriere, c'est a dire si le joueur va a
-  // gauche il peut pas directement aller a droite comme dans le snake classique
+  // gauche il peut pas directement aller a droite comme dans le snake
+  // classique
+  printf("update_player_direction\n");
   switch (direction) {
     case UP:
       if (p->direction != DOWN) {
@@ -156,6 +173,7 @@ void update_player_direction(display_info *game_info, player *p,
 
 void check_collision(display_info *game_info, player *p, int x, int y) {
   // check collission
+  printf("check_collision\n");
   if (game_info->board[x][y] != EMPTY) {
     printf("🚨 player %d collided\n", p->id);
     kill_player(game_info, p);
@@ -163,6 +181,7 @@ void check_collision(display_info *game_info, player *p, int x, int y) {
 }
 
 void update_player_position(display_info *game_info, player *p) {
+  printf("Update Player\n");
   int x = p->x;
   int y = p->y;
   int id = p->id;
@@ -217,16 +236,18 @@ void update_player_position(display_info *game_info, player *p) {
   }
 }
 
-void update_game(display_info *game_info, player *joueurs, int nbr_players) {
+void update_game(display_info *game_info, player *joueurs, int nbr_players,
+                 int *game_running) {
+  printf("update_game\n");
   int i;
   game_info->winner = check_winner(game_info, joueurs, nbr_players);
 
   if (game_info->winner >= 0) {
     printf("🏆 player %d won\n", game_info->winner);
-    game_running = 0;
+    *game_running = 0;
   } else if (game_info->winner == TIE) {
     printf("🪢 Tie\n");
-    game_running = 0;
+    *game_running = 0;
   } else {
     for (i = 0; i < nbr_players; i++) {
       if (joueurs[i].isAlive == 1) {
@@ -239,30 +260,17 @@ void update_game(display_info *game_info, player *joueurs, int nbr_players) {
 
 void send_board_to_all_clients(display_info *game_info, int sockets[],
                                int nbr_sockets) {
+  printf("sendboardtoall\n");
   display_info board_copy;
   memcpy(&board_copy, game_info, sizeof(display_info));
   board_copy.winner = htonl(board_copy.winner);
-
+  printf("%d\n", nbr_sockets);
   for (int i = 0; i < nbr_sockets; i++) {
+    printf("check socket %d\n", i);
     if (sockets[i] != 0) {
+      printf("sendign to %d\n", i);
       CHECK(send(sockets[i], &board_copy, sizeof(display_info), 0));
     }
   }
-}
-
-void *fonction_thread_jeu(void *arg) {
-  thread_arg *t_arg = (thread_arg *)arg;
-  printf("thread jeu\n");
-
-  while (1) {
-    // update game
-    if (*t_arg->game_running == 1) {
-      update_game(t_arg->game_info, t_arg->joueurs, *t_arg->nbr_players);
-      send_board_to_all_clients(t_arg->game_info, t_arg->sockets,
-                                *t_arg->nbr_sockets);
-      usleep(REFRESH_RATE * 1000);
-    } else {
-      pthread_exit(0);
-    }
-  }
+  printf("t2\n");
 }

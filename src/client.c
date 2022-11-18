@@ -5,8 +5,8 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "../include/common.h"
-#include "../include/display.h"
+#include "client-display.c"
+#include "common.h"
 
 int get_player_corresponding_to_key(char key) {
   int player_id = -1;

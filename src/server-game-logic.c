@@ -1,14 +1,13 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#include "../include/common.h"
+#include "common.h"
 
-// arguments temporairement hardcodés
 #define BUF_SIZE 1024
 #define MAX_JOUEURS 2
-#define SERVER_PORT 5555
-#define REFRESH_RATE 100
 
+/// @brief Structure de données pour stocker les informations d'un joueur dans
+/// une partie
 typedef struct player {
   int id;
   int x;
@@ -20,6 +19,10 @@ typedef struct player {
   int id_sur_socket;
 } player;
 
+/// @brief Initialise le plateau de jeu avec des cases vides et des murs
+/// @param game_info Pointeur vers la structure de données du jeu
+/// @param maxX Nombre de colonnes du plateau
+/// @param maxY Nombre de lignes du plateau
 void init_board(display_info *game_info, int maxX, int maxY) {
   printf("init board\n");
   int x, y;
@@ -78,9 +81,7 @@ void remove_player(display_info *game_info, player *list_joueurs,
   printf("remove_player %d\n", id_player);
 }
 
-void kill_player(display_info *game_info, player *player) {
-  player->isAlive = 0;
-}
+void kill_player(player *player) { player->isAlive = 0; }
 
 void reset_players(display_info *game_info, player *lst_joueurs, int maxX,
                    int maxY) {
@@ -105,7 +106,7 @@ void reset_players(display_info *game_info, player *lst_joueurs, int maxX,
 }
 
 void restart(display_info *game_info, int maxX, int maxY, player *lst_joueurs,
-             int nbPlayers, int *game_running) {
+             int *game_running) {
   *game_running = 0;
   init_board(game_info, maxX, maxY);
   reset_players(game_info, lst_joueurs, maxX, maxY);
@@ -176,7 +177,7 @@ void check_collision(display_info *game_info, player *p, int x, int y) {
   printf("check_collision\n");
   if (game_info->board[x][y] != EMPTY) {
     printf("🚨 player %d collided\n", p->id);
-    kill_player(game_info, p);
+    kill_player(p);
   }
 }
 

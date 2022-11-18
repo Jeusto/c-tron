@@ -13,12 +13,10 @@
 #include <time.h>
 #include <unistd.h>
 
-// TODO: ne pas utiliser de variable globale
+#include "common.h"
+#include "server-game-logic.c"
 
-#include "../include/common.h"
-#include "../include/game-logic.h"
-
-int create_socket() {
+int create_socket(int server_port) {
   struct sockaddr_in server_addr;
   int master_socket, opt = 1;
 
@@ -30,7 +28,7 @@ int create_socket() {
   // Preparer adresse serveur
   memset(&server_addr, 0, sizeof(server_addr));
   server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(SERVER_PORT);
+  server_addr.sin_port = htons(server_port);
   server_addr.sin_addr.s_addr = INADDR_ANY;
 
   // Associer socket a l'adresse
@@ -50,16 +48,18 @@ int main(int argc, char *argv[]) {
   struct sockaddr_in client_addr;
   int addr_size = sizeof client_addr;
   display_info game_info;
-  int game_running = 0;
+  int game_running = 0, refresh_rate, server_port;
 
   // Verifier le nombre d'arguments
-  // if (argc != 3) {
-  //   printf("Usage: %s [port_serveur] [refresh_rate] \n", argv[0]);
-  //   exit(EXIT_FAILURE);
-  // }
+  if (argc != 3) {
+    printf("Usage: %s [port_serveur] [refresh_rate] \n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
+  server_port = atoi(argv[1]);
+  refresh_rate = atoi(argv[2]);
 
   // Creer et configurer socket principal
-  master_socket = create_socket();
+  master_socket = create_socket(server_port);
   CHECK(listen(master_socket, MAX_JOUEURS));
 
   // Preparer select
@@ -75,11 +75,10 @@ int main(int argc, char *argv[]) {
   // Boucle pour attendre des messages, des commandes et lancer le jeu
   printf("Waiting for connections or messages...\n");
 
-  int t = 0;
   while (1) {
     // Attendre une activite
     read_fds = master_fds;
-    struct timeval tv = {1, REFRESH_RATE * 1000};
+    struct timeval tv = {0, refresh_rate * 1000};
     CHECK(activity = select(max_fd + 1, &read_fds, NULL, NULL, &tv));
 
     // Evenement sur le socket principal = nouvelle tentative de connexion
@@ -135,8 +134,7 @@ int main(int argc, char *argv[]) {
         game_running = 0;
       } else if (strcmp(buf, "restart") == 0) {
         printf("Restarting...\n");
-        restart(&game_info, XMAX, YMAX, list_joueurs, nb_joueurs,
-                &game_running);
+        restart(&game_info, XMAX, YMAX, list_joueurs, &game_running);
       }
     }
 
@@ -165,7 +163,7 @@ int main(int argc, char *argv[]) {
             for (int j = 0; j < nb_joueurs; j++) {
               if (list_joueurs[j].socket_associe == client_sd) {
                 nb_joueurs--;
-                kill_player(&game_info, &list_joueurs[j]);
+                kill_player(&list_joueurs[j]);
               }
             }
             FD_CLR(client_sd, &master_fds);

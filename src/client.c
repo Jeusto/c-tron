@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
 
   // Verifier le nombre d'arguments
   if (argc != 4) {
-    printf("Usage: %s [IP_serveur] [port_serveur] [nb_joueurs] \n", argv[0]);
+    debug("Usage: %s [IP_serveur] [port_serveur] [nb_joueurs] \n", argv[0]);
     exit(EXIT_FAILURE);
   }
 
@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
 
       // 0 bytes recu = serveur deconnecte
       if (bytes_received == 0) {
-        printf("server closed connection\n");
+        debug("server closed connection\n");
         break;
       }
 

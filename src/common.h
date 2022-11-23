@@ -63,3 +63,9 @@ struct client_init_infos {
 };
 
 #endif
+
+#if defined(DEBUG)
+#define debug(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
+#else
+#define debug(fmt, ...) ((void)0)
+#endif

@@ -31,6 +31,12 @@
 
 #define BUF_SIZE 1024
 
+void display_character(int color, int y, int x, char character) {
+  attron(COLOR_PAIR(color));
+  mvaddch(y, x, character);
+  attroff(COLOR_PAIR(color));
+}
+
 void update_display(display_info *game_info) {
   clear();
 
@@ -90,10 +96,4 @@ void init_graphics() {
   init_pair(CYAN_ON_CYAN, COLOR_CYAN, COLOR_CYAN);
 
   init_pair(WALL, COLOR_WHITE, COLOR_WHITE);
-}
-
-void display_character(int color, int y, int x, char character) {
-  attron(COLOR_PAIR(color));
-  mvaddch(y, x, character);
-  attroff(COLOR_PAIR(color));
 }

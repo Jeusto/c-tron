@@ -24,7 +24,7 @@ typedef struct player {
 /// @param maxX Nombre de colonnes du plateau
 /// @param maxY Nombre de lignes du plateau
 void init_board(display_info *game_info, int maxX, int maxY) {
-  printf("init board\n");
+  debug("init board\n");
   int x, y;
   for (x = 0; x < maxX; x++) {
     for (y = 0; y < maxY; y++) {
@@ -40,7 +40,7 @@ void init_board(display_info *game_info, int maxX, int maxY) {
 
 player add_player(display_info *game_info, int id_player, int new_socket,
                   int id_sur_socket) {
-  printf("add_player %d\n", id_player);
+  debug("add_player %d\n", id_player);
   int maxX = XMAX;
   int maxY = YMAX;
   player new_player;
@@ -78,7 +78,7 @@ player add_player(display_info *game_info, int id_player, int new_socket,
 // supprime un joueur
 void remove_player(display_info *game_info, player *list_joueurs,
                    int *nb_joueurs, int id_player) {
-  printf("remove_player %d\n", id_player);
+  debug("remove_player %d\n", id_player);
 }
 
 void kill_player(player *player) { player->isAlive = 0; }
@@ -116,7 +116,7 @@ void restart(display_info *game_info, int maxX, int maxY, player *lst_joueurs,
 int check_winner(display_info *game_info, player *joueurs, int nbr_players) {
   // si un joueur est mort, on verifie qu'un autre ne serait pas mort au
   // meme moment
-  printf("CheckWinner\n");
+  debug("CheckWinner\n");
   if (!joueurs[0].isAlive || !joueurs[1].isAlive) {
     int i;
     for (i = 0; i < nbr_players; i++) {
@@ -144,7 +144,7 @@ void update_player_direction(display_info *game_info, player *p,
   // on autorise pas de revenir en arriere, c'est a dire si le joueur va a
   // gauche il peut pas directement aller a droite comme dans le snake
   // classique
-  printf("update_player_direction\n");
+  debug("update_player_direction\n");
   switch (direction) {
     case UP:
       if (p->direction != DOWN) {
@@ -174,15 +174,15 @@ void update_player_direction(display_info *game_info, player *p,
 
 void check_collision(display_info *game_info, player *p, int x, int y) {
   // check collission
-  printf("check_collision\n");
+  debug("check_collision\n");
   if (game_info->board[x][y] != EMPTY) {
-    printf("🚨 player %d collided\n", p->id);
+    debug("🚨 player %d collided\n", p->id);
     kill_player(p);
   }
 }
 
 void update_player_position(display_info *game_info, player *p) {
-  printf("Update Player\n");
+  debug("Update Player\n");
   int x = p->x;
   int y = p->y;
   int id = p->id;
@@ -239,20 +239,20 @@ void update_player_position(display_info *game_info, player *p) {
 
 void update_game(display_info *game_info, player *joueurs, int nbr_players,
                  int *game_running) {
-  printf("update_game\n");
+  debug("update_game\n");
   int i;
   game_info->winner = check_winner(game_info, joueurs, nbr_players);
 
   if (game_info->winner >= 0) {
-    printf("🏆 player %d won\n", game_info->winner);
+    debug("🏆 player %d won\n", game_info->winner);
     *game_running = 0;
   } else if (game_info->winner == TIE) {
-    printf("🪢 Tie\n");
+    debug("🪢 Tie\n");
     *game_running = 0;
   } else {
     for (i = 0; i < nbr_players; i++) {
       if (joueurs[i].isAlive == 1) {
-        printf("Updating pos for player %d\n", joueurs[i].id);
+        debug("Updating pos for player %d\n", joueurs[i].id);
         update_player_position(game_info, &joueurs[i]);
       }
     }
@@ -261,17 +261,17 @@ void update_game(display_info *game_info, player *joueurs, int nbr_players,
 
 void send_board_to_all_clients(display_info *game_info, int sockets[],
                                int nbr_sockets) {
-  printf("sendboardtoall\n");
+  debug("sendboardtoall\n");
   display_info board_copy;
   memcpy(&board_copy, game_info, sizeof(display_info));
   board_copy.winner = htonl(board_copy.winner);
-  printf("%d\n", nbr_sockets);
+  debug("%d\n", nbr_sockets);
   for (int i = 0; i < nbr_sockets; i++) {
-    printf("check socket %d\n", i);
+    debug("check socket %d\n", i);
     if (sockets[i] != 0) {
-      printf("sendign to %d\n", i);
+      debug("sendign to %d\n", i);
       CHECK(send(sockets[i], &board_copy, sizeof(display_info), 0));
     }
   }
-  printf("t2\n");
+  debug("t2\n");
 }

@@ -73,7 +73,6 @@ int main(int argc, char *argv[]) {
   init_board(&game_info, XMAX, YMAX);
 
   // Boucle pour attendre des messages, des commandes et lancer le jeu
-  debug("Waiting for connections or messages...\n");
 
   while (1) {
     // Attendre une activite
@@ -83,7 +82,6 @@ int main(int argc, char *argv[]) {
 
     // Evenement sur le socket principal = nouvelle tentative de connexion
     if (FD_ISSET(master_socket, &read_fds)) {
-      debug("Nouvelle connexion\n");
       CHECK(new_socket = accept(master_socket, (struct sockaddr *)&client_addr,
                                 (socklen_t *)&addr_size));
 
@@ -93,12 +91,10 @@ int main(int argc, char *argv[]) {
                                   sizeof(struct client_init_infos), 0));
 
       nb_joueurs_sur_ce_client = init_info.nb_players;
-      debug("nb_joueurs_sur_ce_client : %d\n", nb_joueurs_sur_ce_client);
 
       // Refuser si trop de joueurs
       if (nb_joueurs + nb_joueurs_sur_ce_client > MAX_JOUEURS ||
           nb_joueurs_sur_ce_client > 2) {
-        debug("New connection denied\n");
         close(new_socket);
       }
 
@@ -110,10 +106,7 @@ int main(int argc, char *argv[]) {
           nb_joueurs++;
         }
 
-        debug("Adding to list of client sockets\n");
-        debug("socket %d\n", new_socket);
         list_sockets[nb_clients++] = new_socket;
-        debug("nb_clients_actuel : %d\n", nb_clients);
         FD_SET(new_socket, &master_fds);
         if (new_socket > max_fd) max_fd = new_socket;
 
@@ -129,22 +122,16 @@ int main(int argc, char *argv[]) {
       fgets(buf, BUF_SIZE, stdin);
       buf[strlen(buf) - 1] = '\0';
       if (strcmp(buf, "quit") == 0) {
-        debug("Quitting...\n");
         exit(0);
         game_running = 0;
       } else if (strcmp(buf, "restart") == 0) {
-        debug("Restarting...\n");
         restart(&game_info, XMAX, YMAX, list_joueurs, &game_running);
       }
     }
 
     // parcourir les list_sockets pour voir s'il y a des messages
     else if (game_running) {
-      debug("Parcourir list_sockets\n");
-
       for (int i = 0; i < nb_clients; i++) {
-        debug("joueur = %d, socket = %d\n", i, list_sockets[i]);
-
         int client_sd = list_sockets[i];
         int bytes_received = 0;
         if (FD_ISSET(client_sd, &read_fds)) {
@@ -152,12 +139,9 @@ int main(int argc, char *argv[]) {
           CHECK(bytes_received =
                     recv(client_sd, &input, sizeof(struct client_input), 0));
           input.id = input.id;
-          debug("Recu un input du socket %d, joueur id = %d\n", client_sd,
-                input.id);
 
           if (bytes_received == 0) {
             // deconnexion
-            debug("Client with socket %d deconnected\n", client_sd);
             // supprimer le socket de la liste
             close(client_sd);
             for (int j = 0; j < nb_joueurs; j++) {
@@ -179,8 +163,6 @@ int main(int argc, char *argv[]) {
             for (int j = 0; j < nb_joueurs; j++) {
               if (list_joueurs[j].socket_associe == client_sd &&
                   list_joueurs[j].id_sur_socket == input.id) {
-                debug("Joueur numero %d, sur socket %d, id sur socket = %d\n",
-                      j, client_sd, input.id);
                 update_player_direction(&game_info, &list_joueurs[j],
                                         input.input);
               }
@@ -191,7 +173,6 @@ int main(int argc, char *argv[]) {
     }
 
     if (game_running) {
-      debug("jeu\n");
       if (game_running == 1) {
         update_game(&game_info, list_joueurs, nb_joueurs, &game_running);
         send_board_to_all_clients(&game_info, list_sockets, nb_clients);

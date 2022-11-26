@@ -1,6 +1,3 @@
-#include <pthread.h>
-#include <unistd.h>
-
 #include "common.h"
 
 #define BUF_SIZE 1024

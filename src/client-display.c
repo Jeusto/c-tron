@@ -43,7 +43,7 @@ void update_display(display_info *game_info) {
   // Afficher le plateau
   for (int x = 0; x < XMAX; x++) {
     for (int y = 0; y < YMAX; y++) {
-      int color = game_info->board[x][y];
+      char color = game_info->board[x][y];
 
       if (color >= 0 && color < NB_COLORS) {
         display_character(color, y, x, '0' + color);

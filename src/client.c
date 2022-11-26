@@ -73,7 +73,6 @@ int main(int argc, char** argv) {
     debug("Usage: %s [IP_serveur] [port_serveur] [nb_joueurs] \n", argv[0]);
     exit(EXIT_FAILURE);
   }
-
   // Initialiser l'affichage
   tune_terminal();
   init_graphics();
@@ -95,7 +94,7 @@ int main(int argc, char** argv) {
 
   // Envoyer nombre de joueurs sur ce client au serveur
   struct client_init_infos init_info = {
-      .nb_players = htonl(atoi(argv[3])),
+      .nb_players = atoi(argv[3]),
   };
   CHECK(send(socket_fd, &init_info, sizeof(struct client_init_infos), 0));
 
@@ -113,7 +112,7 @@ int main(int argc, char** argv) {
     if (FD_ISSET(socket_fd, &read_fds)) {
       display_info game_info;
       CHECK(bytes_received =
-                recv(socket_fd, &game_info, sizeof(struct display_info), 0));
+                recv(socket_fd, &game_info, sizeof(display_info), 0));
 
       // 0 bytes recu = serveur deconnecte
       if (bytes_received == 0) {
@@ -121,9 +120,16 @@ int main(int argc, char** argv) {
         break;
       }
 
+      // check if correctly received
+      if (bytes_received != sizeof(display_info)) {
+        debug("received %d bytes instead of %d\n", bytes_received,
+              sizeof(display_info));
+        break;
+      }
+
       // Message recu = mettre a jour l'affichage
       else {
-        game_info.winner = ntohl(game_info.winner);
+        debug("winner: %d\n", game_info.winner);
         update_display(&game_info);
       }
     }
@@ -135,7 +141,7 @@ int main(int argc, char** argv) {
       buf[bytes_received] = '\0';
 
       struct client_input client_input = {
-          .id = htonl(get_player_corresponding_to_key(buf[0])),
+          .id = get_player_corresponding_to_key(buf[0]),
           .input = convert_key_to_movement(buf[0]),
       };
 

@@ -19,6 +19,37 @@ typedef struct player {
   int id_sur_socket;
 } player;
 
+void init_board(display_info *game_info, int maxX, int maxY);
+
+player add_player(display_info *game_info, int id_player, int new_socket,
+                  int id_sur_socket);
+
+// supprime un joueur
+void remove_player(display_info *game_info, player *list_joueurs,
+                   int *nb_joueurs, int id_player);
+
+void kill_player(player *player);
+
+void reset_players(display_info *game_info, player *lst_joueurs, int maxX,
+                   int maxY);
+
+void restart(display_info *game_info, int maxX, int maxY, player *lst_joueurs,
+             int *game_running);
+
+int check_winner(display_info *game_info, player *joueurs, int nbr_players);
+
+void update_player_direction(display_info *game_info, player *p, int direction);
+
+void check_collision(display_info *game_info, player *p, int x, int y);
+
+void update_player_position(display_info *game_info, player *p);
+
+void update_game(display_info *game_info, player *joueurs, int nbr_players,
+                 int *game_running);
+
+void send_board_to_all_clients(display_info *game_info, int sockets[],
+                               int nbr_sockets);
+
 /// @brief Initialise le plateau de jeu avec des cases vides et des murs
 /// @param game_info Pointeur vers la structure de données du jeu
 /// @param maxX Nombre de colonnes du plateau
@@ -262,16 +293,14 @@ void update_game(display_info *game_info, player *joueurs, int nbr_players,
 void send_board_to_all_clients(display_info *game_info, int sockets[],
                                int nbr_sockets) {
   debug("sendboardtoall\n");
-  display_info board_copy;
-  memcpy(&board_copy, game_info, sizeof(display_info));
-  board_copy.winner = htonl(board_copy.winner);
   debug("%d\n", nbr_sockets);
   for (int i = 0; i < nbr_sockets; i++) {
     debug("check socket %d\n", i);
     if (sockets[i] != 0) {
       debug("sendign to %d\n", i);
-      CHECK(send(sockets[i], &board_copy, sizeof(display_info), 0));
+      send(sockets[i], game_info, sizeof(display_info), 0);
     }
   }
+
   debug("t2\n");
 }

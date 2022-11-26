@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 
   // Verifier le nombre d'arguments
   if (argc != 3) {
-    debug("Usage: %s [port_serveur] [refresh_rate] \n", argv[0]);
+    printf("Usage: %s [port_serveur] [refresh_rate] \n", argv[0]);
     exit(EXIT_FAILURE);
   }
   server_port = atoi(argv[1]);
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
       CHECK(bytes_received = recv(new_socket, &init_info,
                                   sizeof(struct client_init_infos), 0));
 
-      nb_joueurs_sur_ce_client = ntohl(init_info.nb_players);
+      nb_joueurs_sur_ce_client = init_info.nb_players;
       debug("nb_joueurs_sur_ce_client : %d\n", nb_joueurs_sur_ce_client);
 
       // Refuser si trop de joueurs
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
           struct client_input input;
           CHECK(bytes_received =
                     recv(client_sd, &input, sizeof(struct client_input), 0));
-          input.id = ntohl(input.id);
+          input.id = input.id;
           debug("Recu un input du socket %d, joueur id = %d\n", client_sd,
                 input.id);
 
@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
     if (game_running) {
       debug("jeu\n");
       if (game_running == 1) {
-        update_game(&game_info, &list_joueurs, nb_joueurs, &game_running);
+        update_game(&game_info, list_joueurs, nb_joueurs, &game_running);
         send_board_to_all_clients(&game_info, list_sockets, nb_clients);
       }
     }

@@ -1,4 +1,3 @@
-#include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -16,6 +15,9 @@
 #include "common.h"
 #include "server-game-logic.c"
 
+/// @brief Cree un socket, le lie a l'adresse et le port
+/// @param server_port Port du serveur
+/// @return Socket cree
 int create_socket(int server_port) {
   struct sockaddr_in server_addr;
   int master_socket, opt = 1;
@@ -69,11 +71,10 @@ int main(int argc, char *argv[]) {
   FD_SET(master_socket, &master_fds);
   max_fd = master_socket;
 
-  // Iitialiser le jeu
+  // Initialiser le jeu
   init_board(&game_info, XMAX, YMAX);
 
   // Boucle pour attendre des messages, des commandes et lancer le jeu
-
   while (1) {
     // Attendre une activite
     read_fds = master_fds;
@@ -89,16 +90,15 @@ int main(int argc, char *argv[]) {
       struct client_init_infos init_info;
       CHECK(bytes_received = recv(new_socket, &init_info,
                                   sizeof(struct client_init_infos), 0));
-
       nb_joueurs_sur_ce_client = init_info.nb_players;
 
-      // Refuser si trop de joueurs
+      // Refuser s'il y aura trop de joueurs dans la partie
       if (nb_joueurs + nb_joueurs_sur_ce_client > MAX_JOUEURS ||
           nb_joueurs_sur_ce_client > 2) {
         close(new_socket);
       }
 
-      // sinon, accepter
+      // Sinon, accepter
       else {
         for (int i = 0; i < nb_joueurs_sur_ce_client; i++) {
           list_joueurs[nb_joueurs] =
@@ -110,13 +110,14 @@ int main(int argc, char *argv[]) {
         FD_SET(new_socket, &master_fds);
         if (new_socket > max_fd) max_fd = new_socket;
 
-        // si max joueurs atteint, lancer le jeu
+        // Si le nombre de joueurs est suffisant, lancer le jeu
         if (nb_joueurs == MAX_JOUEURS) {
           game_running = 1;
         }
       }
     }
 
+    // Evenement sur stdin = commande pour le serveur (restart ou quit)
     else if (FD_ISSET(STDIN_FILENO, &read_fds)) {
       char buf[BUF_SIZE];
       fgets(buf, BUF_SIZE, stdin);
@@ -129,7 +130,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // parcourir les list_sockets pour voir s'il y a des messages
+    // Parcourir tout les sockets pour voir s'il y a des messages
     else if (game_running) {
       for (int i = 0; i < nb_clients; i++) {
         int client_sd = list_sockets[i];
@@ -140,26 +141,31 @@ int main(int argc, char *argv[]) {
                     recv(client_sd, &input, sizeof(struct client_input), 0));
           input.id = input.id;
 
+          // 0 bytes recu = client deconnecte
           if (bytes_received == 0) {
-            // deconnexion
-            // supprimer le socket de la liste
+            // Supprimer le socket de la liste
             close(client_sd);
+            list_sockets[i] = 0;
+            FD_CLR(client_sd, &master_fds);
+
+            // Supprimer les joueurs associes a ce socket
             for (int j = 0; j < nb_joueurs; j++) {
               if (list_joueurs[j].socket_associe == client_sd) {
                 nb_joueurs--;
                 kill_player(&list_joueurs[j]);
               }
             }
-            FD_CLR(client_sd, &master_fds);
-            list_sockets[i] = 0;
 
+            // Mettre a jour max_fd si necessaire
             if (client_sd == max_fd) {
               for (int j = 0; j < nb_clients; j++) {
                 if (list_sockets[j] > max_fd) max_fd = list_sockets[j];
               }
             }
-          } else {
-            // message recu
+          }
+
+          // Message recu = mettre a jour la direction d'un joueur
+          else {
             for (int j = 0; j < nb_joueurs; j++) {
               if (list_joueurs[j].socket_associe == client_sd &&
                   list_joueurs[j].id_sur_socket == input.id) {
@@ -172,6 +178,8 @@ int main(int argc, char *argv[]) {
       }
     }
 
+    // Si le jeu est en cours, mettre a jour le jeu et envoyer les infos a
+    // tout les clients (tout les X ms grace au timeout de select)
     if (game_running) {
       if (game_running == 1) {
         update_game(&game_info, list_joueurs, nb_joueurs, &game_running);

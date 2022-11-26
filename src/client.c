@@ -125,7 +125,6 @@ int main(int argc, char** argv) {
       if (bytes_received == 0) {
         break;
       }
-
       // Message recu = mettre a jour l'affichage
       else {
         update_display(&game_info);

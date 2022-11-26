@@ -32,6 +32,9 @@
 #define WALL 111
 #define EMPTY ' '
 
+#define BUF_SIZE 1024
+#define MAX_JOUEURS 2
+
 #define max(a, b)           \
   ({                        \
     __typeof__(a) _a = (a); \
@@ -62,10 +65,4 @@ struct client_init_infos {
   int nb_players;
 };
 
-#endif
-
-#if defined(DEBUG)
-#define debug(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
-#else
-#define debug(fmt, ...) ((void)0)
 #endif

@@ -1,8 +1,5 @@
 #include "common.h"
 
-#define BUF_SIZE 1024
-#define MAX_JOUEURS 2
-
 /// @brief Structure de données pour stocker les infos d'un joueur dans le jeu
 typedef struct player {
   int id;

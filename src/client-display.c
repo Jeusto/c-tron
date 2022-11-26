@@ -29,8 +29,6 @@
 #define KEY_RIGHT_P2 'l'
 #define KEY_TRAIL_P2 'm'
 
-#define BUF_SIZE 1024
-
 void display_character(int color, int y, int x, char character) {
   attron(COLOR_PAIR(color));
   mvaddch(y, x, character);

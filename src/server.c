@@ -180,5 +180,6 @@ int main(int argc, char *argv[]) {
   }
 
   CHECK(close(master_socket));
+  CHECK(close(new_socket));
   return 0;
 }

@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 
   // Verifier le nombre d'arguments
   if (argc != 4) {
-    debug("Usage: %s [IP_serveur] [port_serveur] [nb_joueurs] \n", argv[0]);
+    printf("Usage: %s [IP_serveur] [port_serveur] [nb_joueurs] \n", argv[0]);
     exit(EXIT_FAILURE);
   }
 

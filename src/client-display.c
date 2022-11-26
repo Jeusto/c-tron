@@ -37,6 +37,8 @@ void display_character(int color, int y, int x, char character) {
   attroff(COLOR_PAIR(color));
 }
 
+/// @brief Met a jour l'affichage du jeu
+/// @param game_info Informations du jeu
 void update_display(display_info *game_info) {
   clear();
 
@@ -54,12 +56,15 @@ void update_display(display_info *game_info) {
   }
 
   // Afficher le resultat si la partie est finie
-  if (game_info->winner == TIE) {
-    mvprintw(YMAX + 1, 1, "Tie!");
-  } else if (game_info->winner != NO_WINNER) {
-    mvprintw(YMAX + 1, 1,
-             "Player %d won! Wait for the server to restart a game or leave!",
-             game_info->winner);
+  if (game_info->winner != NO_WINNER) {
+    clear();
+    if (game_info->winner == TIE) {
+      mvprintw(YMAX / 2, XMAX / 2, "Egalite!");
+    } else {
+      mvprintw(YMAX / 2, XMAX / 2, "Le joueur %d a gagne!", game_info->winner);
+    }
+    mvprintw(YMAX / 2 + 1, XMAX / 2,
+             "Attendez que le serveur redemarre une partie ou quittez.");
   }
 
   refresh();

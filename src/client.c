@@ -8,6 +8,9 @@
 #include "client-display.c"
 #include "common.h"
 
+/// @brief Renvoie le joueur correspondant a une touche donnee
+/// @param key Touche appuyee
+/// @return Joueur correspondant a la touche
 int get_player_corresponding_to_key(char key) {
   int player_id = -1;
 
@@ -32,10 +35,13 @@ int get_player_corresponding_to_key(char key) {
   return player_id;
 }
 
-int convert_key_to_movement(char c) {
+/// @brief Renvoie la direction correspondant a une touche donnee
+/// @param c Touche appuyee
+/// @return Direction correspondant a la touche
+int convert_key_to_movement(char key) {
   int input = -1;
 
-  switch (c) {
+  switch (key) {
     case KEY_UP_P1:
     case KEY_UP_P2:
       input = UP;
@@ -73,6 +79,7 @@ int main(int argc, char** argv) {
     debug("Usage: %s [IP_serveur] [port_serveur] [nb_joueurs] \n", argv[0]);
     exit(EXIT_FAILURE);
   }
+
   // Initialiser l'affichage
   tune_terminal();
   init_graphics();
@@ -116,20 +123,11 @@ int main(int argc, char** argv) {
 
       // 0 bytes recu = serveur deconnecte
       if (bytes_received == 0) {
-        debug("server closed connection\n");
-        break;
-      }
-
-      // check if correctly received
-      if (bytes_received != sizeof(display_info)) {
-        debug("received %d bytes instead of %d\n", bytes_received,
-              sizeof(display_info));
         break;
       }
 
       // Message recu = mettre a jour l'affichage
       else {
-        debug("winner: %d\n", game_info.winner);
         update_display(&game_info);
       }
     }

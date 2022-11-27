@@ -71,9 +71,15 @@ int main(int argc, char** argv) {
   struct sockaddr_in server_addr;
   fd_set read_fds;
 
-  // Verifier le nombre d'arguments
+  // Verifier les arguments
   if (argc != 4) {
     printf("Usage: %s [IP_serveur] [port_serveur] [nb_joueurs] \n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
+
+  int player_count = atoi(argv[3]);
+  if (player_count < 1 || player_count > 2) {
+    printf("Nombre de joueurs doit etre 1 ou 2\n");
     exit(EXIT_FAILURE);
   }
 
@@ -103,6 +109,7 @@ int main(int argc, char** argv) {
   CHECK(send(socket_fd, &init_info, sizeof(struct client_init_infos), 0));
 
   // Boucle pour attendre des messages du serveur et afficher le jeu
+  show_centered_message("En attente des autres joueurs...");
   while (1) {
     // Preparer select
     FD_ZERO(&read_fds);
@@ -120,10 +127,11 @@ int main(int argc, char** argv) {
 
       // 0 bytes recu = serveur deconnecte
       if (bytes_received == 0) {
+        show_centered_message("Le serveur a ete deconnecte");
         break;
       }
 
-      // Message recu = mettre a jour l'affichage
+      // Message recu > 0 bytes = mettre a jour l'affichage
       else {
         update_display(&game_info);
       }
@@ -131,13 +139,11 @@ int main(int argc, char** argv) {
 
     // Un des joueurs a appuye sur une touche
     if (FD_ISSET(STDIN_FILENO, &read_fds)) {
-      char buf[BUF_SIZE];
-      CHECK(bytes_received = read(STDIN_FILENO, buf, BUF_SIZE));
-      buf[bytes_received] = '\0';
+      char key = getchar();
 
       struct client_input client_input = {
-          .id = get_player_corresponding_to_key(buf[0]),
-          .input = convert_key_to_direction(buf[0]),
+          .id = get_player_corresponding_to_key(key),
+          .input = convert_key_to_direction(key),
       };
 
       // Envoyer touche au serveur si c'est valide

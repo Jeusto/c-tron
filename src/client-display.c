@@ -58,15 +58,24 @@ void update_display(display_info *game_info) {
     clear();
 
     if (game_info->winner == TIE) {
-      mvprintw(YMAX / 2, XMAX / 2, "Egalite!");
+      mvprintw(YMAX / 2, XMAX / 4, "Egalite!");
     } else {
-      mvprintw(YMAX / 2, XMAX / 2, "Le joueur %d a gagne!", game_info->winner);
+      mvprintw(YMAX / 2, XMAX / 4, "Le joueur %d a gagne!", game_info->winner);
     }
 
-    mvprintw(YMAX / 2 + 1, XMAX / 2,
-             "Attendez que le serveur redemarre une partie ou quittez.");
+    mvprintw(
+        YMAX / 2 + 2, XMAX / 4,
+        "Veuillez attendre que le serveur redemarre une partie ou quittez.");
   }
 
+  refresh();
+}
+
+/// @brief Affiche un message au centre de l'ecran
+/// @param message Message a afficher
+void show_centered_message(char *message) {
+  clear();
+  mvprintw(YMAX / 2, XMAX / 4, message);
   refresh();
 }
 

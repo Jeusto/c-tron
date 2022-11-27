@@ -46,7 +46,9 @@ void update_display(display_info *game_info) {
       char color = game_info->board[x][y];
 
       if (color >= 0 && color < NB_COLORS) {
-        display_character(color, y, x, '0' + color);
+        display_character(color, y, x, '0' + color + 1);
+      } else if (color == EMPTY) {
+        display_character(color, y, x, ' ');
       } else {
         display_character(color, y, x, color);
       }
@@ -60,7 +62,8 @@ void update_display(display_info *game_info) {
     if (game_info->winner == TIE) {
       mvprintw(YMAX / 2, XMAX / 4, "Egalite!");
     } else {
-      mvprintw(YMAX / 2, XMAX / 4, "Le joueur %d a gagne!", game_info->winner);
+      mvprintw(YMAX / 2, XMAX / 4, "Le joueur %d a gagne!",
+               game_info->winner + 1);
     }
 
     mvprintw(

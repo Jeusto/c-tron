@@ -56,11 +56,13 @@ void update_display(display_info *game_info) {
   // Afficher le resultat si la partie est finie
   if (game_info->winner != NO_WINNER) {
     clear();
+
     if (game_info->winner == TIE) {
       mvprintw(YMAX / 2, XMAX / 2, "Egalite!");
     } else {
       mvprintw(YMAX / 2, XMAX / 2, "Le joueur %d a gagne!", game_info->winner);
     }
+
     mvprintw(YMAX / 2 + 1, XMAX / 2,
              "Attendez que le serveur redemarre une partie ou quittez.");
   }

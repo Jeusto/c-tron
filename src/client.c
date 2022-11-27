@@ -35,7 +35,7 @@ int get_player_corresponding_to_key(char key) {
 /// @brief Renvoie la direction correspondant a une touche donnee
 /// @param c Touche appuyee
 /// @return Direction correspondant a la touche
-int convert_key_to_movement(char key) {
+int convert_key_to_direction(char key) {
   int input = -1;
 
   switch (key) {
@@ -122,6 +122,7 @@ int main(int argc, char** argv) {
       if (bytes_received == 0) {
         break;
       }
+
       // Message recu = mettre a jour l'affichage
       else {
         update_display(&game_info);
@@ -136,7 +137,7 @@ int main(int argc, char** argv) {
 
       struct client_input client_input = {
           .id = get_player_corresponding_to_key(buf[0]),
-          .input = convert_key_to_movement(buf[0]),
+          .input = convert_key_to_direction(buf[0]),
       };
 
       // Envoyer touche au serveur si c'est valide

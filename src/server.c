@@ -32,10 +32,10 @@ int create_socket(int server_port) {
 }
 
 int main(int argc, char *argv[]) {
-  int nb_joueurs = 0, nb_clients = 0, nb_joueurs_sur_ce_client = 0;
+  int player_count = 0, client_count = 0, players_on_this_client = 0;
   int max_fd, master_socket, new_socket, activity;
-  int list_sockets[MAX_JOUEURS] = {0};
-  player list_joueurs[MAX_JOUEURS];
+  int sockets_list[MAX_PLAYERS] = {0};
+  player players_list[MAX_PLAYERS];
   int bytes_received = 0;
   fd_set master_fds, read_fds;
   struct sockaddr_in client_addr;
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
 
   // Creer et configurer socket principal
   master_socket = create_socket(server_port);
-  CHECK(listen(master_socket, MAX_JOUEURS));
+  CHECK(listen(master_socket, MAX_PLAYERS));
 
   // Preparer select
   FD_ZERO(&read_fds);
@@ -81,28 +81,28 @@ int main(int argc, char *argv[]) {
       struct client_init_infos init_info;
       CHECK(bytes_received = recv(new_socket, &init_info,
                                   sizeof(struct client_init_infos), 0));
-      nb_joueurs_sur_ce_client = init_info.nb_players;
+      players_on_this_client = init_info.nb_players;
 
       // Refuser s'il y aura trop de joueurs dans la partie
-      if (nb_joueurs + nb_joueurs_sur_ce_client > MAX_JOUEURS ||
-          nb_joueurs_sur_ce_client > 2) {
+      if (player_count + players_on_this_client > MAX_PLAYERS ||
+          players_on_this_client > 2) {
         close(new_socket);
       }
 
       // Sinon, accepter
       else {
-        for (int i = 0; i < nb_joueurs_sur_ce_client; i++) {
-          list_joueurs[nb_joueurs] =
-              add_player(&game_info, nb_joueurs, new_socket, i);
-          nb_joueurs++;
+        for (int i = 0; i < players_on_this_client; i++) {
+          players_list[player_count] =
+              add_player(&game_info, player_count, new_socket, i);
+          player_count++;
         }
 
-        list_sockets[nb_clients++] = new_socket;
+        sockets_list[client_count++] = new_socket;
         FD_SET(new_socket, &master_fds);
         if (new_socket > max_fd) max_fd = new_socket;
 
         // Si le nombre de joueurs est suffisant, lancer le jeu
-        if (nb_joueurs == MAX_JOUEURS) {
+        if (player_count == MAX_PLAYERS) {
           game_running = 1;
         }
       }
@@ -113,20 +113,24 @@ int main(int argc, char *argv[]) {
       char buf[BUF_SIZE];
       fgets(buf, BUF_SIZE, stdin);
       buf[strlen(buf) - 1] = '\0';
+
       if (strcmp(buf, "quit") == 0) {
         exit(0);
         game_running = 0;
       } else if (strcmp(buf, "restart") == 0) {
-        restart(&game_info, XMAX, YMAX, list_joueurs, &game_running);
+        restart(&game_info, XMAX, YMAX, players_list, &game_running);
       }
     }
 
-    // Parcourir tout les sockets pour voir s'il y a des messages
+    // Si le jeu est en cours, parcourir tout les sockets pour voir s'il y a des
+    // messages a recevoir
     else if (game_running) {
-      for (int i = 0; i < nb_clients; i++) {
-        int client_sd = list_sockets[i];
+      for (int i = 0; i < client_count; i++) {
+        int client_sd = sockets_list[i];
         int bytes_received = 0;
+
         if (FD_ISSET(client_sd, &read_fds)) {
+          // Recevoir message d'un client
           struct client_input input;
           CHECK(bytes_received =
                     recv(client_sd, &input, sizeof(struct client_input), 0));
@@ -136,31 +140,31 @@ int main(int argc, char *argv[]) {
           if (bytes_received == 0) {
             // Supprimer le socket de la liste
             close(client_sd);
-            list_sockets[i] = 0;
+            sockets_list[i] = 0;
             FD_CLR(client_sd, &master_fds);
 
             // Supprimer les joueurs associes a ce socket
-            for (int j = 0; j < nb_joueurs; j++) {
-              if (list_joueurs[j].socket_associe == client_sd) {
-                nb_joueurs--;
-                kill_player(&list_joueurs[j]);
+            for (int j = 0; j < player_count; j++) {
+              if (players_list[j].socket_associated == client_sd) {
+                player_count--;
+                kill_player(&players_list[j]);
               }
             }
 
             // Mettre a jour max_fd si necessaire
             if (client_sd == max_fd) {
-              for (int j = 0; j < nb_clients; j++) {
-                if (list_sockets[j] > max_fd) max_fd = list_sockets[j];
+              for (int j = 0; j < client_count; j++) {
+                if (sockets_list[j] > max_fd) max_fd = sockets_list[j];
               }
             }
           }
 
-          // Message recu = mettre a jour la direction d'un joueur
+          // Message recu > 0 bytes = mettre a jour la direction d'un joueur
           else {
-            for (int j = 0; j < nb_joueurs; j++) {
-              if (list_joueurs[j].socket_associe == client_sd &&
-                  list_joueurs[j].id_sur_socket == input.id) {
-                update_player_direction(&game_info, &list_joueurs[j],
+            for (int j = 0; j < player_count; j++) {
+              if (players_list[j].socket_associated == client_sd &&
+                  players_list[j].id_on_socket == input.id) {
+                update_player_direction(&game_info, &players_list[j],
                                         input.input);
               }
             }
@@ -169,13 +173,11 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // Si le jeu est en cours, mettre a jour le jeu et envoyer les infos a
+    // Si le jeu est en cours, mettre a jour le plateau et envoyer les infos a
     // tout les clients (tout les X ms grace au timeout de select)
     if (game_running) {
-      if (game_running == 1) {
-        update_game(&game_info, list_joueurs, nb_joueurs, &game_running);
-        send_board_to_all_clients(&game_info, list_sockets, nb_clients);
-      }
+      update_game(&game_info, players_list, player_count, &game_running);
+      send_board_to_all_clients(&game_info, sockets_list, client_count);
     }
   }
 

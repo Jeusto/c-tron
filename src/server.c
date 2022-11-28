@@ -70,11 +70,12 @@ int main(int argc, char *argv[]) {
       {XMAX / 2, 1, RIGHT}, {XMAX / 2, YMAX - 2, LEFT}};
 
   // Boucle pour attendre des messages, des commandes et lancer le jeu
+  struct timeval tv_copie = {0, refresh_rate * 1000};
   while (1) {
     // Attendre une activite
     read_fds = master_fds;
-    struct timeval tv = {0, refresh_rate * 1000};
-    CHECK(activity = select(max_fd + 1, &read_fds, NULL, NULL, &tv));
+    struct timeval tv_select = {tv_copie.tv_sec, tv_copie.tv_usec};
+    CHECK(activity = select(max_fd + 1, &read_fds, NULL, NULL, &tv_select));
 
     // Evenement sur le socket principal = nouvelle tentative de connexion
     if (FD_ISSET(master_socket, &read_fds)) {
@@ -125,15 +126,18 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // Si le jeu est en cours, mettre a jour le plateau et envoyer les infos a
+    // Si le jeu est en cours, mettre a jour le plateau et envoyer les infos
     // tout les clients (tout les X ms grace au timeout de select)
+    // si fait ca, faut changer le tv avant le select
     // FIXME: pas portable ? voir manpage select
-    if (game_running && tv.tv_sec == 0 && tv.tv_usec == 0) {
-      update_game(&game_info, players_list, player_count, &game_running);
-      send_board_to_all_clients(&game_info, sockets_list, client_count);
-    } else if (game_running && tv.tv_sec == 0 && tv.tv_usec != 0) {
-      tv.tv_usec = refresh_rate * 1000 - tv.tv_usec;
-    }
+    // if (game_running) {
+    //   if (tv_select.tv_usec == 0) {
+    //     update_game(&game_info, players_list, player_count, &game_running);
+    //     send_board_to_all_clients(&game_info, sockets_list, client_count);
+    //   } else if (tv_select.tv_usec != 0) {
+    //     tv_copie.tv_usec = refresh_rate * 1000 - tv_select.tv_usec;
+    //   }
+    // }
 
     // Parcourir tout les sockets pour voir s'il y a des messages a recevoir
     for (int i = 0; i < client_count; i++) {
@@ -156,12 +160,15 @@ int main(int argc, char *argv[]) {
 
         // Jeu en cours & message recu = mettre a jour la direction d'un joueur
         else if (game_running) {
-          printf("Received input %d from client %d, player on socket %d\n",
-                 input.input, i, input.id);
           update_player_direction(players_list, player_count, client_sd,
                                   input.id, input.input);
         }
       }
+    }
+
+    if (game_running && activity == 0) {
+      update_game(&game_info, players_list, player_count, &game_running);
+      send_board_to_all_clients(&game_info, sockets_list, client_count);
     }
   }
 

@@ -238,7 +238,6 @@ void update_player_direction(player *players_list, int player_count,
       p->trail_is_enabled = !p->trail_is_enabled;
       break;
   }
-  printf("test2\n");
 }
 
 /// @brief Met a jour le jeu en deplacant les joueurs et en verifiant s'il y a

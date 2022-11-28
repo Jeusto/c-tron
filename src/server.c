@@ -150,11 +150,14 @@ int main(int argc, char *argv[]) {
         // 0 bytes recu = client deconnecte
         if (bytes_received == 0) {
           // Fermer le serveur
-          break;
+          close(master_socket);
+          exit(EXIT_SUCCESS);
         }
 
         // Jeu en cours & message recu = mettre a jour la direction d'un joueur
         else if (game_running) {
+          printf("Received input %d from client %d, player on socket %d\n",
+                 input.input, i, input.id);
           update_player_direction(players_list, player_count, client_sd,
                                   input.id, input.input);
         }

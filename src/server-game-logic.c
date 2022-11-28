@@ -193,12 +193,21 @@ void update_player_direction(player *players_list, int player_count,
                              int direction) {
   // Chercher le joueur qui correspond au couple socket/id_sur_socket
   player *p;
+  int player_found = 0;
   int j;
+
   for (j = 0; j < player_count; j++) {
     if (players_list[j].socket_associated == socket_associated &&
         players_list[j].id_on_socket == id_on_socket) {
       p = &players_list[j];
+      player_found = 1;
     }
+  }
+
+  // Si le joueur n'a pas ete trouve, on ignore. (par exemple input du deuxieme
+  // joueur sur un socket qui n'en contient qu'un)
+  if (player_found == 0) {
+    return;
   }
 
   // Modifier la direction du joueur (on autorise pas de revenir en arriere,
@@ -229,6 +238,7 @@ void update_player_direction(player *players_list, int player_count,
       p->trail_is_enabled = !p->trail_is_enabled;
       break;
   }
+  printf("test2\n");
 }
 
 /// @brief Met a jour le jeu en deplacant les joueurs et en verifiant s'il y a

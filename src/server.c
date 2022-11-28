@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 
 #include "common.h"
 #include "server-game-logic.c"
@@ -64,17 +65,20 @@ int main(int argc, char *argv[]) {
 
   // Initialiser le jeu
   init_board(&game_info);
-  initial_player_position init[8] = {
-      {1, 1, DOWN},         {XMAX - 2, YMAX - 2, UP},  {1, YMAX - 2, DOWN},
-      {XMAX - 2, 1, UP},    {1, YMAX / 2, DOWN},       {XMAX - 2, YMAX / 2, UP},
-      {XMAX / 2, 1, RIGHT}, {XMAX / 2, YMAX - 2, LEFT}};
+  initial_player_position init[4] = {{2, YMAX / 2, RIGHT},
+                                     {XMAX - 3, YMAX / 2, LEFT},
+                                     {XMAX / 2, 2, DOWN},
+                                     {XMAX / 2, YMAX - 2, UP}};
+
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  long int temps_precedent_refresh = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000;
 
   // Boucle pour attendre des messages, des commandes et lancer le jeu
-  struct timeval tv_copie = {0, refresh_rate * 1000};
   while (1) {
     // Attendre une activite
     read_fds = master_fds;
-    struct timeval tv_select = {tv_copie.tv_sec, tv_copie.tv_usec};
+    struct timeval tv_select = {0, 1000 * refresh_rate};
     CHECK(activity = select(max_fd + 1, &read_fds, NULL, NULL, &tv_select));
 
     // Evenement sur le socket principal = nouvelle tentative de connexion
@@ -126,18 +130,19 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // Si le jeu est en cours, mettre a jour le plateau et envoyer les infos
-    // tout les clients (tout les X ms grace au timeout de select)
-    // si fait ca, faut changer le tv avant le select
-    // FIXME: pas portable ? voir manpage select
-    // if (game_running) {
-    //   if (tv_select.tv_usec == 0) {
-    //     update_game(&game_info, players_list, player_count, &game_running);
-    //     send_board_to_all_clients(&game_info, sockets_list, client_count);
-    //   } else if (tv_select.tv_usec != 0) {
-    //     tv_copie.tv_usec = refresh_rate * 1000 - tv_select.tv_usec;
-    //   }
-    // }
+    // Mettre a jour le jeu si le jeu est en cours et il s'est ecoule
+    // suffisamment de temps depuis le dernier refresh rate
+    if (game_running) {
+      struct timeval tv;
+      gettimeofday(&tv, NULL);
+      long int temps_actuel_en_ms = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000;
+
+      if ((temps_actuel_en_ms - temps_precedent_refresh) > refresh_rate) {
+        temps_precedent_refresh = temps_actuel_en_ms;
+        update_game(&game_info, players_list, player_count, &game_running);
+        send_board_to_all_clients(&game_info, sockets_list, client_count);
+      }
+    }
 
     // Parcourir tout les sockets pour voir s'il y a des messages a recevoir
     for (int i = 0; i < client_count; i++) {
@@ -164,11 +169,6 @@ int main(int argc, char *argv[]) {
                                   input.id, input.input);
         }
       }
-    }
-
-    if (game_running && activity == 0) {
-      update_game(&game_info, players_list, player_count, &game_running);
-      send_board_to_all_clients(&game_info, sockets_list, client_count);
     }
   }
 

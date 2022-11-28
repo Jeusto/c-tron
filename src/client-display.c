@@ -60,14 +60,14 @@ void update_display(display_info *game_info) {
     clear();
 
     if (game_info->winner == TIE) {
-      mvprintw(YMAX / 2, XMAX / 4, "Egalite!");
+      mvprintw(YMAX / 2, XMAX / 8, "Egalite!");
     } else {
-      mvprintw(YMAX / 2, XMAX / 4, "Le joueur %d a gagne!",
+      mvprintw(YMAX / 2, XMAX / 8, "Le joueur %d a gagne!",
                game_info->winner + 1);
     }
 
     mvprintw(
-        YMAX / 2 + 2, XMAX / 4,
+        YMAX / 2 + 2, XMAX / 8,
         "Veuillez attendre que le serveur redemarre une partie ou quittez.");
   }
 
@@ -78,7 +78,7 @@ void update_display(display_info *game_info) {
 /// @param message Message a afficher
 void show_centered_message(char *message) {
   clear();
-  mvprintw(YMAX / 2, XMAX / 4, "%s", message);
+  mvprintw(YMAX / 2, XMAX / 8, "%s", message);
   refresh();
 }
 

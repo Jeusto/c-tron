@@ -78,7 +78,7 @@ void update_display(display_info *game_info) {
 /// @param message Message a afficher
 void show_centered_message(char *message) {
   clear();
-  mvprintw(YMAX / 2, XMAX / 4, message);
+  mvprintw(YMAX / 2, XMAX / 4, "%s", message);
   refresh();
 }
 

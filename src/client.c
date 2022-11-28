@@ -127,7 +127,9 @@ int main(int argc, char** argv) {
 
       // 0 bytes recu = serveur deconnecte
       if (bytes_received == 0) {
-        show_centered_message("Le serveur a ete deconnecte");
+        show_centered_message(
+            "Le serveur a ete deconnecte. Soit un client a quitte le jeu, soit "
+            "le serveur a ete arrete.");
         break;
       }
 

@@ -63,7 +63,11 @@ int main(int argc, char *argv[]) {
   max_fd = master_socket;
 
   // Initialiser le jeu
-  init_board(&game_info, XMAX, YMAX);
+  init_board(&game_info);
+  initial_player_position init[8] = {
+      {1, 1, DOWN},         {XMAX - 2, YMAX - 2, UP},  {1, YMAX - 2, DOWN},
+      {XMAX - 2, 1, UP},    {1, YMAX / 2, DOWN},       {XMAX - 2, YMAX / 2, UP},
+      {XMAX / 2, 1, RIGHT}, {XMAX / 2, YMAX - 2, LEFT}};
 
   // Boucle pour attendre des messages, des commandes et lancer le jeu
   while (1) {
@@ -92,7 +96,7 @@ int main(int argc, char *argv[]) {
       else {
         for (int i = 0; i < players_on_this_client; i++) {
           players_list[player_count] =
-              add_player(&game_info, player_count, new_socket, i);
+              add_player(&game_info, init, player_count, new_socket, i);
           player_count++;
         }
 
@@ -114,12 +118,10 @@ int main(int argc, char *argv[]) {
       buf[strlen(buf) - 1] = '\0';
 
       if (strcmp(buf, "quit") == 0) {
-        CHECK(close(master_socket));
-        CHECK(close(new_socket));
-        exit(0);
         game_running = 0;
+        break;
       } else if (strcmp(buf, "restart") == 0) {
-        restart(&game_info, XMAX, YMAX, players_list, &game_running);
+        restart(&game_info, init, players_list, &game_running);
       }
     }
 
@@ -147,37 +149,14 @@ int main(int argc, char *argv[]) {
 
         // 0 bytes recu = client deconnecte
         if (bytes_received == 0) {
-          // Supprimer le socket de la liste
-          close(client_sd);
-          sockets_list[i] = 0;
-          FD_CLR(client_sd, &master_fds);
-
-          // Supprimer les joueurs associes a ce socket
-          for (int j = 0; j < player_count; j++) {
-            if (players_list[j].socket_associated == client_sd) {
-              player_count--;
-              kill_player(&players_list[j]);
-            }
-          }
-
-          // Mettre a jour max_fd si necessaire
-          if (client_sd == max_fd) {
-            for (int j = 0; j < client_count; j++) {
-              if (sockets_list[j] > max_fd) max_fd = sockets_list[j];
-            }
-          }
+          // Fermer le serveur
+          break;
         }
 
-        // Jeu en cours & message recu > 0 bytes = mettre a jour la direction
-        // d'un joueur
+        // Jeu en cours & message recu = mettre a jour la direction d'un joueur
         else if (game_running) {
-          for (int j = 0; j < player_count; j++) {
-            if (players_list[j].socket_associated == client_sd &&
-                players_list[j].id_on_socket == input.id) {
-              update_player_direction(&game_info, &players_list[j],
-                                      input.input);
-            }
-          }
+          update_player_direction(players_list, player_count, client_sd,
+                                  input.id, input.input);
         }
       }
     }

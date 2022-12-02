@@ -28,6 +28,7 @@
 #define KEY_LEFT_P2 'j'
 #define KEY_RIGHT_P2 'l'
 #define KEY_TRAIL_P2 'm'
+#define KEY_QUIT 'x'
 
 void display_character(int color, int y, int x, char character) {
   attron(COLOR_PAIR(color));
@@ -66,9 +67,9 @@ void update_display(display_info *game_info) {
                game_info->winner + 1);
     }
 
-    mvprintw(
-        YMAX / 2 + 2, XMAX / 8,
-        "Veuillez attendre que le serveur redemarre une partie ou quittez.");
+    mvprintw(YMAX / 2 + 2, XMAX / 8,
+             "Veuillez attendre que le serveur redemarre une partie ou appuyez "
+             "sur 'x' pour quitter.");
   }
 
   refresh();

@@ -159,6 +159,7 @@ int main(int argc, char *argv[]) {
         // 0 bytes recu = client deconnecte
         if (bytes_received == 0) {
           // Fermer le serveur
+          printf("Un client a quitte le jeu, le serveur va se deconnecter.\n");
           close(master_socket);
           exit(EXIT_SUCCESS);
         }

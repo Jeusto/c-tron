@@ -128,8 +128,7 @@ int main(int argc, char** argv) {
       // 0 bytes recu = serveur deconnecte
       if (bytes_received == 0) {
         show_centered_message(
-            "Le serveur a ete deconnecte. Soit un client a quitte le jeu, soit "
-            "le serveur a ete arrete.");
+            "Le serveur a ete deconnecte. Merci d'avoir joue!");
         break;
       }
 
@@ -143,6 +142,13 @@ int main(int argc, char** argv) {
     if (FD_ISSET(STDIN_FILENO, &read_fds)) {
       char key = getchar();
 
+      // Si la touche est la touche pour quitter, quitter le jeu
+      if (key == KEY_QUIT) {
+        show_centered_message("Merci d'avoir joue!");
+        break;
+      }
+
+      // Sinon creer la structure a envoyer au serveur
       struct client_input client_input = {
           .id = get_player_corresponding_to_key(key),
           .input = convert_key_to_direction(key),

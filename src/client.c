@@ -2,8 +2,7 @@
 #include <sys/socket.h>
 #include <time.h>
 
-#include "client-display.c"
-#include "common.h"
+#include "../include/display.h"
 
 /// @brief Renvoie le joueur correspondant a une touche donnee
 /// @param key Touche appuyee
@@ -68,7 +67,7 @@ int convert_key_to_direction(char key) {
 
 int main(int argc, char** argv) {
   int socket_fd, max_fd, activity = 0, bytes_received = 0;
-  struct sockaddr_in server_addr;
+  SAI server_addr;
   fd_set read_fds;
 
   // Verifier les arguments
@@ -99,8 +98,7 @@ int main(int argc, char** argv) {
   inet_aton(argv[1], &(server_addr.sin_addr));
 
   // Se connecter au serveur
-  CHECK(
-      connect(socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)));
+  CHECK(connect(socket_fd, (SA*)&server_addr, sizeof(server_addr)));
 
   // Envoyer nombre de joueurs sur ce client au serveur
   struct client_init_infos init_info = {

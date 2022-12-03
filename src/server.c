@@ -4,14 +4,13 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 
-#include "common.h"
-#include "server-game-logic.c"
+#include "../include/game-logic.h"
 
 /// @brief Cree un socket, le lie a l'adresse et le port
 /// @param server_port Port du serveur
 /// @return Socket cree
 int create_socket(int server_port) {
-  struct sockaddr_in server_addr;
+  SAI server_addr;
   int master_socket, opt = 1;
 
   // Creer et configurer socket principal
@@ -34,15 +33,14 @@ int create_socket(int server_port) {
 
 int main(int argc, char *argv[]) {
   int player_count = 0, client_count = 0, players_on_this_client = 0;
-  int max_fd, master_socket, new_socket, activity;
+  int max_fd, master_socket, new_socket, activity, bytes_received = 0;
+  int refresh_rate, server_port, game_running = 0;
   int sockets_list[MAX_PLAYERS] = {0};
   player players_list[MAX_PLAYERS];
-  int bytes_received = 0;
   fd_set master_fds, read_fds;
-  struct sockaddr_in client_addr;
+  SAI client_addr;
   int addr_size = sizeof client_addr;
   display_info game_info;
-  int game_running = 0, refresh_rate, server_port;
 
   // Verifier le nombre d'arguments
   if (argc != 3) {
@@ -70,7 +68,7 @@ int main(int argc, char *argv[]) {
                                      {XMAX / 2, 2, DOWN},
                                      {XMAX / 2, YMAX - 2, UP}};
 
-  struct timeval tv;
+  TV tv;
   gettimeofday(&tv, NULL);
   long int temps_precedent_refresh = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000;
 
@@ -78,12 +76,12 @@ int main(int argc, char *argv[]) {
   while (1) {
     // Attendre une activite
     read_fds = master_fds;
-    struct timeval tv_select = {0, 1000 * refresh_rate};
+    TV tv_select = {0, 1000 * refresh_rate};
     CHECK(activity = select(max_fd + 1, &read_fds, NULL, NULL, &tv_select));
 
     // Evenement sur le socket principal = nouvelle tentative de connexion
     if (FD_ISSET(master_socket, &read_fds)) {
-      CHECK(new_socket = accept(master_socket, (struct sockaddr *)&client_addr,
+      CHECK(new_socket = accept(master_socket, (SA *)&client_addr,
                                 (socklen_t *)&addr_size));
 
       // Recevoir le nombre de joueurs sur ce client
@@ -133,7 +131,7 @@ int main(int argc, char *argv[]) {
     // Mettre a jour le jeu si le jeu est en cours et il s'est ecoule
     // suffisamment de temps depuis le dernier refresh rate
     if (game_running) {
-      struct timeval tv;
+      TV tv;
       gettimeofday(&tv, NULL);
       long int temps_actuel_en_ms = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000;
 

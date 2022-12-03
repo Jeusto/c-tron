@@ -32,41 +32,46 @@ int create_socket(int server_port) {
 }
 
 int main(int argc, char *argv[]) {
-  int player_count = 0, client_count = 0, players_on_this_client = 0;
-  int max_fd, master_socket, new_socket, activity, bytes_received = 0;
-  int refresh_rate, server_port, game_running = 0;
-  int sockets_list[MAX_PLAYERS] = {0};
-  player players_list[MAX_PLAYERS];
-  fd_set master_fds, read_fds;
-  SAI client_addr;
-  int addr_size = sizeof client_addr;
-  display_info game_info;
-
-  // Verifier le nombre d'arguments
+  // Verifier les arguments
   if (argc != 3) {
-    printf("Usage: %s [port_serveur] [refresh_rate] \n", argv[0]);
+    printf("Usage: %s [port_serveur] [refresh_rate]\n", argv[0]);
     exit(EXIT_FAILURE);
   }
-  server_port = atoi(argv[1]);
-  refresh_rate = atoi(argv[2]);
 
-  // Creer et configurer socket principal
-  master_socket = create_socket(server_port);
-  CHECK(listen(master_socket, MAX_PLAYERS));
-
-  // Preparer select
-  FD_ZERO(&read_fds);
-  FD_ZERO(&master_fds);
-  FD_SET(STDIN_FILENO, &master_fds);
-  FD_SET(master_socket, &master_fds);
-  max_fd = master_socket;
-
-  // Initialiser le jeu
-  init_board(&game_info);
+  // Initialiser les variables liees au jeu
+  int server_port = atoi(argv[1]);
+  int refresh_rate = atoi(argv[2]);
+  int max_players = MAX_PLAYERS;
+  int player_count = 0, game_running = 0;
+  player players_list[max_players];
+  display_info game_info;
   initial_player_position init[4] = {{2, YMAX / 2, RIGHT},
                                      {XMAX - 3, YMAX / 2, LEFT},
                                      {XMAX / 2, 2, DOWN},
                                      {XMAX / 2, YMAX - 2, UP}};
+
+  // Initialiser les variables liees au serveur
+  int new_socket, activity, bytes_received = 0;
+  int client_count = 0, players_on_this_client = 0;
+  int sockets_list[max_players];
+  for (int i = 0; i < max_players; i++) {
+    sockets_list[i] = 0;
+  }
+
+  // Creer et configurer socket principal
+  int master_socket = create_socket(server_port);
+  CHECK(listen(master_socket, max_players));
+
+  // Preparer select
+  fd_set master_fds, read_fds;
+  SAI client_addr;
+  int addr_size = sizeof client_addr;
+  int max_fd = master_socket;
+
+  FD_ZERO(&read_fds);
+  FD_ZERO(&master_fds);
+  FD_SET(STDIN_FILENO, &master_fds);
+  FD_SET(master_socket, &master_fds);
 
   TV tv;
   gettimeofday(&tv, NULL);
@@ -91,15 +96,15 @@ int main(int argc, char *argv[]) {
       players_on_this_client = init_info.nb_players;
 
       // Refuser s'il y aura trop de joueurs dans la partie
-      if (player_count + players_on_this_client > MAX_PLAYERS) {
+      if (player_count + players_on_this_client > max_players) {
         close(new_socket);
       }
 
       // Sinon, accepter
       else {
         for (int i = 0; i < players_on_this_client; i++) {
-          players_list[player_count] =
-              add_player(&game_info, init, player_count, new_socket, i);
+          add_player(players_list, &game_info, init, player_count, new_socket,
+                     i);
           player_count++;
         }
 
@@ -108,8 +113,9 @@ int main(int argc, char *argv[]) {
         if (new_socket > max_fd) max_fd = new_socket;
 
         // Si le nombre de joueurs est suffisant, lancer le jeu
-        if (player_count == MAX_PLAYERS) {
-          game_running = 1;
+        if (player_count == max_players) {
+          restart_game(&game_info, init, players_list, &game_running,
+                       max_players);
         }
       }
     }
@@ -124,7 +130,8 @@ int main(int argc, char *argv[]) {
         game_running = 0;
         break;
       } else if (strcmp(buf, "restart") == 0) {
-        restart(&game_info, init, players_list, &game_running);
+        restart_game(&game_info, init, players_list, &game_running,
+                     max_players);
       }
     }
 

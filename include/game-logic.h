@@ -24,14 +24,16 @@ typedef struct initial_player_position {
 void init_board(display_info *game_info);
 
 /// @brief Ajoute un joueur au jeu
+/// @param players_list Liste des joueurs
 /// @param game_info Informations du jeu
 /// @param init Positions initiales des joueurs
 /// @param id_player Id du joueur a ajouter
 /// @param new_socket Socket associe au joueur
 /// @param id_on_socket Id du joueur sur le socket a laquelle il est associe
 /// @return Le nouveau joueur cree
-player add_player(display_info *game_info, initial_player_position *init,
-                  int id_player, int new_socket, int id_on_socket);
+void add_player(player *players_list, display_info *game_info,
+                initial_player_position *init, int id_player, int new_socket,
+                int id_on_socket);
 
 /// @brief Tue un joueur
 /// @param player Le joueur à tuer
@@ -42,15 +44,15 @@ void kill_player(player *player);
 /// @param init Positions initiales des joueurs
 /// @param players_list Liste des joueurs
 void reset_players(display_info *game_info, initial_player_position *init,
-                   player *players_list);
+                   player *players_list, int max_players);
 
 /// @brief Redémarre le jeu
 /// @param game_info Informations du jeu
 /// @param init Positions initiales des joueurs
 /// @param players_list Liste des joueurs
 /// @param game_running Ptr vers la variable indiquant si le jeu est en cours
-void restart(display_info *game_info, initial_player_position *init,
-             player *players_list, int *game_running);
+void restart_game(display_info *game_info, initial_player_position *init,
+                  player *players_list, int *game_running, int max_players);
 
 /// @brief Verifie si un joueur est en collision avec un autre joueur ou les
 /// murs et le tue si c'est le cas
@@ -66,12 +68,10 @@ void check_collision(display_info *game_info, player *p, int x, int y);
 void update_player_position(display_info *game_info, player *p);
 
 /// @brief Vérifie si un joueur a gagné
-/// @param game_info Informations du jeu
 /// @param players_list Liste des joueurs
 /// @param player_count Nombre de joueurs
 /// @return 1 si un joueur a gagné, -2 si il y a égalité, -1 sinon
-int check_winner(display_info *game_info, player *players_list,
-                 int player_count);
+int check_winner(player *players_list, int player_count);
 
 /// @brief Met à jour la position d'un joueur
 /// @param p Joueur dont la direction doit être mise à jour

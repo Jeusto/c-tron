@@ -33,7 +33,6 @@
 #define EMPTY ' '
 
 #define BUF_SIZE 1024
-#define MAX_PLAYERS 2
 
 #define max(a, b)           \
   ({                        \

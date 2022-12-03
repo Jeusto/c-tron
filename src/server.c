@@ -33,15 +33,20 @@ int create_socket(int server_port) {
 
 int main(int argc, char *argv[]) {
   // Verifier les arguments
-  if (argc != 3) {
-    printf("Usage: %s [port_serveur] [refresh_rate]\n", argv[0]);
+  if (argc != 4) {
+    printf("Usage: %s [port_serveur] [refresh_rate] [max_joueurs]\n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
+
+  int max_players = atoi(argv[3]);
+  if (max_players < 2 || max_players > 4) {
+    printf("Nombre de joueurs max doit etre entre 1 et 4 \n");
     exit(EXIT_FAILURE);
   }
 
   // Initialiser les variables liees au jeu
   int server_port = atoi(argv[1]);
   int refresh_rate = atoi(argv[2]);
-  int max_players = MAX_PLAYERS;
   int player_count = 0, game_running = 0;
   player players_list[max_players];
   display_info game_info;

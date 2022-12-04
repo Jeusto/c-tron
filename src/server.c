@@ -121,6 +121,15 @@ int main(int argc, char *argv[]) {
         if (player_count == max_players) {
           restart_game(&game_info, init, players_list, &game_running,
                        max_players);
+          // Sinon, envoyer message d'informations
+        } else {
+          char msg[BUF_SIZE];
+          sprintf(msg,
+                  "%d joueurs connecte. Il en faut encore %d pour commencer la "
+                  "partie.",
+                  player_count, max_players - player_count);
+
+          send_text_to_all_clients(msg, sockets_list, client_count);
         }
       }
     }

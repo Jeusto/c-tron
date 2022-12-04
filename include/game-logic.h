@@ -95,3 +95,17 @@ void update_game(display_info *game_info, player *players_list,
 /// @param socket_count Nombre de sockets
 void send_board_to_all_clients(display_info *game_info, int sockets_list[],
                                int socket_count);
+
+/// @brief Envoie un message text a tout les clients connectes
+/// @param message Message text a envoyer
+/// @param sockets_list Sockets des clients connectes
+/// @param socket_count Nombre de sockets
+void send_text_to_all_clients(char *message, int sockets_list[],
+                              int socket_count);
+
+/// @brief Envoie un message a tout les clients connectes
+/// @param msg Message a envoyer
+/// @param sockets_list Sockets des clients connectes
+/// @param socket_count Nombre de sockets
+void send_socket_msg_to_all_clients(socket_message msg, int sockets_list[],
+                                    int socket_count);

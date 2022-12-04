@@ -107,7 +107,6 @@ int main(int argc, char** argv) {
   CHECK(send(socket_fd, &init_info, sizeof(struct client_init_infos), 0));
 
   // Boucle pour attendre des messages du serveur et afficher le jeu
-  show_centered_message("En attente des autres joueurs...");
   while (1) {
     // Preparer select
     FD_ZERO(&read_fds);
@@ -119,9 +118,8 @@ int main(int argc, char** argv) {
 
     // Message recu du serveur
     if (FD_ISSET(socket_fd, &read_fds)) {
-      display_info game_info;
-      CHECK(bytes_received =
-                recv(socket_fd, &game_info, sizeof(display_info), 0));
+      socket_message msg;
+      CHECK(bytes_received = recv(socket_fd, &msg, sizeof(socket_message), 0));
 
       // 0 bytes recu = serveur deconnecte
       if (bytes_received == 0) {
@@ -130,9 +128,15 @@ int main(int argc, char** argv) {
         break;
       }
 
-      // Message recu > 0 bytes = mettre a jour l'affichage
+      // Vraie message recu
       else {
-        update_display(&game_info);
+        if (msg.type == GAME_STATE) {
+          // Afficher le jeu
+          update_display(&msg.info);
+        } else if (msg.type == TEXT_MESSAGE) {
+          // Afficher le message
+          show_centered_message(msg.text);
+        }
       }
     }
 

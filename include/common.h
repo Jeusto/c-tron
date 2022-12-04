@@ -33,6 +33,8 @@
 #define EMPTY ' '
 
 #define BUF_SIZE 1024
+#define GAME_STATE 0
+#define TEXT_MESSAGE 1
 
 #define max(a, b)           \
   ({                        \
@@ -54,6 +56,16 @@ typedef struct display_info {
   char board[XMAX][YMAX];
   int winner;
 } display_info;
+
+/// @brief Structure utiliser pour envoyer soit des messages
+/// d'informations soit l'etat du jeu
+typedef struct socket_message {
+  int type;
+  union {
+    display_info info;
+    char text[BUF_SIZE];
+  };
+} socket_message;
 
 struct client_input {
   int id;

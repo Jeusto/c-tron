@@ -193,9 +193,27 @@ void update_game(display_info *game_info, player *players_list,
 
 void send_board_to_all_clients(display_info *game_info, int sockets_list[],
                                int socket_count) {
+  socket_message msg;
+  msg.type = GAME_STATE;
+  msg.info = *game_info;
+
+  send_socket_msg_to_all_clients(msg, sockets_list, socket_count);
+}
+
+void send_text_to_all_clients(char *message, int sockets_list[],
+                              int socket_count) {
+  socket_message msg;
+  msg.type = TEXT_MESSAGE;
+  strcpy(msg.text, message);
+
+  send_socket_msg_to_all_clients(msg, sockets_list, socket_count);
+}
+
+void send_socket_msg_to_all_clients(socket_message msg, int sockets_list[],
+                                    int socket_count) {
   for (int i = 0; i < socket_count; i++) {
     if (sockets_list[i] != 0) {
-      send(sockets_list[i], game_info, sizeof(display_info), 0);
+      send(sockets_list[i], &msg, sizeof(socket_message), 0);
     }
   }
 }

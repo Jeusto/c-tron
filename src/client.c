@@ -67,7 +67,8 @@ int convert_key_to_direction(char key) {
 
 int main(int argc, char** argv) {
   int socket_fd, max_fd, activity = 0, bytes_received = 0;
-  SAI server_addr;
+  SAI6 server_addr;
+
   fd_set read_fds;
 
   // Verifier les arguments
@@ -88,14 +89,14 @@ int main(int argc, char** argv) {
   srand(time(NULL));
 
   // Creer socket
-  CHECK(socket_fd = socket(AF_INET, SOCK_STREAM, 0));
+  CHECK(socket_fd = socket(AF_INET6, SOCK_STREAM, 0));
   max_fd = socket_fd;
 
   // Preparer adresse serveur
   memset(&server_addr, 0, sizeof(server_addr));
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(atoi(argv[2]));
-  inet_aton(argv[1], &(server_addr.sin_addr));
+  server_addr.sin6_family = AF_INET6;
+  server_addr.sin6_port = htons(atoi(argv[2]));
+  inet_pton(AF_INET6, argv[1], &server_addr.sin6_addr);
 
   // Se connecter au serveur
   CHECK(connect(socket_fd, (SA*)&server_addr, sizeof(server_addr)));

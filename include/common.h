@@ -27,6 +27,10 @@
 
 #define SA struct sockaddr
 #define SAI struct sockaddr_in
+#define SAI6 struct sockaddr_in6
+#define SAST struct sockaddr_storage
+#define SLEN sizeof(struct sockaddr_in)
+#define SLEN6 sizeof(struct sockaddr_in6)
 #define TV struct timeval
 
 #define WALL 111

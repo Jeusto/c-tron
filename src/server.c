@@ -10,19 +10,19 @@
 /// @param server_port Port du serveur
 /// @return Socket cree
 int create_socket(int server_port) {
-  SAI server_addr;
+  SAI6 server_addr;
   int master_socket, opt = 1;
 
   // Creer et configurer socket principal
-  CHECK(master_socket = socket(AF_INET, SOCK_STREAM, 0));
+  CHECK(master_socket = socket(AF_INET6, SOCK_STREAM, 0));
   CHECK(setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt,
                    sizeof(opt)));
 
   // Preparer adresse serveur
   memset(&server_addr, 0, sizeof(server_addr));
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(server_port);
-  server_addr.sin_addr.s_addr = INADDR_ANY;
+  server_addr.sin6_family = AF_INET6;
+  server_addr.sin6_port = htons(server_port);
+  server_addr.sin6_addr = in6addr_any;
 
   // Associer socket a l'adresse
   CHECK(bind(master_socket, (struct sockaddr *)&server_addr,
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 
   // Preparer select
   fd_set master_fds, read_fds;
-  SAI client_addr;
+  SAI6 client_addr;
   int addr_size = sizeof client_addr;
   int max_fd = master_socket;
 

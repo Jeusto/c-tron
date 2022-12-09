@@ -28,6 +28,7 @@ void update_display(display_info *game_info) {
       attron(COLOR_PAIR(game_info->winner));
       mvprintw(YMAX / 2, XMAX / 8, "Le joueur %d a gagne!",
                game_info->winner + 1);
+      attroff(COLOR_PAIR(game_info->winner));
     }
 
     mvprintw(YMAX / 2 + 2, XMAX / 8,

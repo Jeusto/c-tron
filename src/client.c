@@ -102,6 +102,8 @@ int main(int argc, char** argv) {
 
   // Envoyer nombre de joueurs sur ce client au serveur
   struct client_init_infos init_info = {
+      // Il faudrait potentiellement utiliser htonl() mais l'executable du prof
+      // n'utilise pas ntohl donc on ne l'a pas fait
       .nb_players = atoi(argv[3]),
   };
   CHECK(send(socket_fd, &init_info, sizeof(struct client_init_infos), 0));

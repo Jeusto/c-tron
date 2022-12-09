@@ -25,6 +25,7 @@ void update_display(display_info *game_info) {
     if (game_info->winner == TIE) {
       mvprintw(YMAX / 2, XMAX / 8, "Egalite!");
     } else {
+      attron(COLOR_PAIR(game_info->winner));
       mvprintw(YMAX / 2, XMAX / 8, "Le joueur %d a gagne!",
                game_info->winner + 1);
     }
